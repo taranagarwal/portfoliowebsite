@@ -1,7 +1,8 @@
 class PortfolioManager {
     constructor() {
         this.isLoggedIn = false;
-        this.password = window.CONFIG?.ADMIN_PASSWORD;
+        // Use hardcoded hash for security - hash of "chuchu13"
+        this.passwordHash = '19e67dfe7c23556f0bdfab1f8889bb386c600fab5cacd87e3753751e3fde7ddc';
         this.data = this.loadData();
         this.init();
     }
@@ -51,7 +52,7 @@ class PortfolioManager {
         // Auth events
         document.getElementById('loginBtn').addEventListener('click', () => this.showLoginModal());
         document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
-        document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
+        document.getElementById('loginForm').addEventListener('submit', async (e) => await this.handleLogin(e));
 
         // Edit events
         document.getElementById('editAboutBtn').addEventListener('click', () => this.editAbout());
@@ -86,15 +87,25 @@ class PortfolioManager {
         });
     }
 
+    async hashPassword(password) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
     showLoginModal() {
         document.getElementById('loginModal').style.display = 'block';
     }
 
-    handleLogin(e) {
+    async handleLogin(e) {
         e.preventDefault();
         const enteredPassword = document.getElementById('password').value;
         
-        if (enteredPassword === this.password) {
+        // Hash the entered password and compare
+        const hashedInput = await this.hashPassword(enteredPassword);
+        if (hashedInput === this.passwordHash) {
             this.isLoggedIn = true;
             this.updateUIBasedOnAuth();
             this.renderContent();
