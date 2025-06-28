@@ -103,16 +103,30 @@ class PortfolioManager {
         e.preventDefault();
         const enteredPassword = document.getElementById('password').value;
         
-        // Hash the entered password and compare
-        const hashedInput = await this.hashPassword(enteredPassword);
-        if (hashedInput === this.passwordHash) {
-            this.isLoggedIn = true;
-            this.updateUIBasedOnAuth();
-            this.renderContent();
-            this.closeModals();
-            document.getElementById('password').value = '';
-        } else {
-            alert('Incorrect password!');
+        try {
+            // Hash the entered password and compare
+            const hashedInput = await this.hashPassword(enteredPassword);
+            if (hashedInput === this.passwordHash) {
+                this.isLoggedIn = true;
+                this.updateUIBasedOnAuth();
+                this.renderContent();
+                this.closeModals();
+                document.getElementById('password').value = '';
+            } else {
+                alert('Incorrect password!');
+            }
+        } catch (error) {
+            console.error('Hash error:', error);
+            // Fallback: direct comparison for development
+            if (enteredPassword === 'chuchu13') {
+                this.isLoggedIn = true;
+                this.updateUIBasedOnAuth();
+                this.renderContent();
+                this.closeModals();
+                document.getElementById('password').value = '';
+            } else {
+                alert('Incorrect password!');
+            }
         }
     }
 
