@@ -1,14 +1,17 @@
 class PortfolioManager {
     constructor() {
         this.isLoggedIn = false;
-        // Authorized browser fingerprint - only Taran's computer
-        this.authorizedFingerprint = 'eyJzY3JlZW4iOiIxNTEy';
+        // Authorized fingerprint with high entropy - only your specific setup
+        this.authorizedFingerprint = '-1877139945';
         this.data = this.loadData();
         this.init();
     }
 
     async init() {
         this.currentFingerprint = await this.generateFingerprint();
+        console.log('Current fingerprint:', this.currentFingerprint);
+        console.log('Authorized fingerprint:', this.authorizedFingerprint);
+        console.log('Match:', this.currentFingerprint === this.authorizedFingerprint);
         this.bindEvents();
         this.renderContent();
         this.updateUIBasedOnAuth();
@@ -51,7 +54,7 @@ class PortfolioManager {
 
     bindEvents() {
         // Auth events
-        document.getElementById('loginBtn').addEventListener('click', () => this.showLoginModal());
+        document.getElementById('loginBtn').addEventListener('click', () => this.handleDirectLogin());
         document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
         document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
 
@@ -89,22 +92,81 @@ class PortfolioManager {
     }
 
     async generateFingerprint() {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        ctx.textBaseline = 'top';
-        ctx.font = '14px Arial';
-        ctx.fillText('Browser fingerprint', 2, 2);
-        
-        const fingerprint = {
-            screen: `${screen.width}x${screen.height}`,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            language: navigator.language,
-            platform: navigator.userAgentData?.platform || navigator.platform,
-            userAgent: navigator.userAgent.slice(0, 50), // First 50 chars only
-            canvas: canvas.toDataURL().slice(0, 50) // First 50 chars of canvas
-        };
-        
-        return btoa(JSON.stringify(fingerprint)).slice(0, 20); // Short unique ID
+        try {
+            // Create stable canvas fingerprint (no timing)
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 200;
+            canvas.height = 50;
+            
+            // Draw stable pattern
+            ctx.fillStyle = 'rgb(102, 204, 0)';
+            ctx.fillRect(0, 0, 200, 50);
+            ctx.fillStyle = 'rgb(255, 0, 102)';
+            ctx.font = '18px Arial';
+            ctx.fillText('Unique Browser Test', 2, 20);
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'blue';
+            ctx.fillRect(100, 5, 80, 40);
+            
+            // Get WebGL info (very browser/GPU specific)
+            let webglInfo = 'no-webgl';
+            try {
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (gl) {
+                    const renderer = gl.getParameter(gl.RENDERER);
+                    const vendor = gl.getParameter(gl.VENDOR);
+                    webglInfo = `${vendor}-${renderer}`;
+                }
+            } catch(e) {}
+            
+            const fingerprint = {
+                screen: `${screen.width}x${screen.height}x${screen.colorDepth}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                language: navigator.language,
+                platform: navigator.userAgentData?.platform || navigator.platform,
+                userAgent: navigator.userAgent.slice(0, 100),
+                canvas: canvas.toDataURL(),
+                webgl: webglInfo,
+                memory: navigator.deviceMemory || 'unknown',
+                cores: navigator.hardwareConcurrency || 'unknown'
+            };
+            
+            // Create stable hash
+            const jsonStr = JSON.stringify(fingerprint);
+            let hash = 0;
+            for (let i = 0; i < jsonStr.length; i++) {
+                const char = jsonStr.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            
+            return hash.toString();
+        } catch (error) {
+            console.error('Fingerprint error:', error);
+            return 'stable-fallback';
+        }
+    }
+
+    simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return hash.toString();
+    }
+
+    handleDirectLogin() {
+        // Check if this is Taran's specific browser/computer setup
+        if (this.currentFingerprint === this.authorizedFingerprint) {
+            this.isLoggedIn = true;
+            this.updateUIBasedOnAuth();
+            this.renderContent();
+        } else {
+            alert('You are not Taran');
+        }
     }
 
     showLoginModal() {
