@@ -1,7 +1,7 @@
 class PortfolioManager {
     constructor() {
         this.isLoggedIn = false;
-        this.password = 'admin123'; // Change this to your desired password
+        this.passwordHash = window.CONFIG?.ADMIN_PASSWORD_HASH || '19e67dfe7c23556f0bdfab1f8889bb386c600fab5cacd87e3753751e3fde7ddc';
         this.data = this.loadData();
         this.init();
     }
@@ -36,7 +36,9 @@ class PortfolioManager {
                     id: 1,
                     title: "Portfolio Website",
                     description: "A responsive portfolio website built with HTML, CSS, and JavaScript.",
-                    technologies: ["HTML", "CSS", "JavaScript"]
+                    technologies: ["HTML", "CSS", "JavaScript"],
+                    year: "2024",
+                    link: "https://github.com/username/portfolio"
                 }
             ],
             profilePhoto: "https://via.placeholder.com/200x200"
@@ -51,7 +53,7 @@ class PortfolioManager {
         // Auth events
         document.getElementById('loginBtn').addEventListener('click', () => this.showLoginModal());
         document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
-        document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
+        document.getElementById('loginForm').addEventListener('submit', async (e) => await this.handleLogin(e));
 
         // Edit events
         document.getElementById('editAboutBtn').addEventListener('click', () => this.editAbout());
@@ -86,17 +88,29 @@ class PortfolioManager {
         });
     }
 
+    async hashPassword(password) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
     showLoginModal() {
         document.getElementById('loginModal').style.display = 'block';
     }
 
-    handleLogin(e) {
+    async handleLogin(e) {
         e.preventDefault();
         const enteredPassword = document.getElementById('password').value;
         
-        if (enteredPassword === this.password) {
+        // Hash the entered password
+        const hashedPassword = await this.hashPassword(enteredPassword);
+        
+        if (hashedPassword === this.passwordHash) {
             this.isLoggedIn = true;
             this.updateUIBasedOnAuth();
+            this.renderContent();
             this.closeModals();
             document.getElementById('password').value = '';
         } else {
@@ -107,6 +121,7 @@ class PortfolioManager {
     logout() {
         this.isLoggedIn = false;
         this.updateUIBasedOnAuth();
+        this.renderContent();
     }
 
     updateUIBasedOnAuth() {
@@ -183,8 +198,9 @@ class PortfolioManager {
             const projectElement = document.createElement('div');
             projectElement.className = 'project-item';
             projectElement.innerHTML = `
-                <h3>${project.title}</h3>
+                <h3>${project.title} ${project.year ? `(${project.year})` : ''}</h3>
                 <p>${project.description}</p>
+                ${project.link ? `<p><a href="${project.link}" target="_blank" style="color: #3498db; text-decoration: none;">🔗 View Project</a></p>` : ''}
                 <div class="project-tech">
                     ${project.technologies.map(tech => `<span class="tech-tag">${tech}</span>`).join('')}
                 </div>
@@ -424,6 +440,8 @@ class PortfolioManager {
             <input type="text" id="projectTitle" placeholder="Project Title">
             <textarea id="projectDescription" placeholder="Project description..."></textarea>
             <input type="text" id="projectTech" placeholder="Technologies (comma-separated)">
+            <input type="text" id="projectYear" placeholder="Year (e.g., 2024)">
+            <input type="text" id="projectLink" placeholder="Project Link (optional)">
             <button onclick="portfolio.saveProject()">Save</button>
         `);
     }
@@ -432,20 +450,24 @@ class PortfolioManager {
         const title = document.getElementById('projectTitle').value;
         const description = document.getElementById('projectDescription').value;
         const techString = document.getElementById('projectTech').value;
+        const year = document.getElementById('projectYear').value;
+        const link = document.getElementById('projectLink').value;
 
         if (title && description && techString) {
             const newProject = {
                 id: Date.now(),
                 title,
                 description,
-                technologies: techString.split(',').map(tech => tech.trim())
+                technologies: techString.split(',').map(tech => tech.trim()),
+                year: year || '',
+                link: link || ''
             };
             this.data.projects.push(newProject);
             this.saveData();
             this.renderContent();
             this.closeModals();
         } else {
-            alert('Please fill all fields!');
+            alert('Please fill title, description, and technologies!');
         }
     }
 
@@ -457,6 +479,8 @@ class PortfolioManager {
             <input type="text" id="projectTitle" placeholder="Project Title" value="${project.title}">
             <textarea id="projectDescription" placeholder="Project description...">${project.description}</textarea>
             <input type="text" id="projectTech" placeholder="Technologies (comma-separated)" value="${project.technologies.join(', ')}">
+            <input type="text" id="projectYear" placeholder="Year (e.g., 2024)" value="${project.year || ''}">
+            <input type="text" id="projectLink" placeholder="Project Link (optional)" value="${project.link || ''}">
             <button onclick="portfolio.updateProject(${id})">Update</button>
         `);
     }
@@ -465,6 +489,8 @@ class PortfolioManager {
         const title = document.getElementById('projectTitle').value;
         const description = document.getElementById('projectDescription').value;
         const techString = document.getElementById('projectTech').value;
+        const year = document.getElementById('projectYear').value;
+        const link = document.getElementById('projectLink').value;
 
         if (title && description && techString) {
             const projectIndex = this.data.projects.findIndex(p => p.id === id);
@@ -473,14 +499,16 @@ class PortfolioManager {
                     id,
                     title,
                     description,
-                    technologies: techString.split(',').map(tech => tech.trim())
+                    technologies: techString.split(',').map(tech => tech.trim()),
+                    year: year || '',
+                    link: link || ''
                 };
                 this.saveData();
                 this.renderContent();
                 this.closeModals();
             }
         } else {
-            alert('Please fill all fields!');
+            alert('Please fill title, description, and technologies!');
         }
     }
 
