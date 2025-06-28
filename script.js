@@ -9,9 +9,6 @@ class PortfolioManager {
 
     async init() {
         this.currentFingerprint = await this.generateFingerprint();
-        console.log('Current fingerprint:', this.currentFingerprint);
-        console.log('Authorized fingerprints:', this.authorizedFingerprints);
-        console.log('Match:', this.authorizedFingerprints.includes(this.currentFingerprint));
         this.bindEvents();
         this.renderContent();
         this.updateUIBasedOnAuth();
