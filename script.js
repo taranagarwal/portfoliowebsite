@@ -1,7 +1,6 @@
 class PortfolioManager {
     constructor() {
         this.isLoggedIn = false;
-        // Use hardcoded hash for security - hash of "chuchu13"
         this.passwordHash = '19e67dfe7c23556f0bdfab1f8889bb386c600fab5cacd87e3753751e3fde7ddc';
         this.data = this.loadData();
         this.init();
@@ -52,7 +51,7 @@ class PortfolioManager {
         // Auth events
         document.getElementById('loginBtn').addEventListener('click', () => this.showLoginModal());
         document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
-        document.getElementById('loginForm').addEventListener('submit', async (e) => await this.handleLogin(e));
+        document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
 
         // Edit events
         document.getElementById('editAboutBtn').addEventListener('click', () => this.editAbout());
@@ -87,46 +86,34 @@ class PortfolioManager {
         });
     }
 
-    async hashPassword(password) {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(password);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return hash.toString();
     }
 
     showLoginModal() {
         document.getElementById('loginModal').style.display = 'block';
     }
 
-    async handleLogin(e) {
+    handleLogin(e) {
         e.preventDefault();
         const enteredPassword = document.getElementById('password').value;
         
-        try {
-            // Hash the entered password and compare
-            const hashedInput = await this.hashPassword(enteredPassword);
-            if (hashedInput === this.passwordHash) {
-                this.isLoggedIn = true;
-                this.updateUIBasedOnAuth();
-                this.renderContent();
-                this.closeModals();
-                document.getElementById('password').value = '';
-            } else {
-                alert('Incorrect password!');
-            }
-        } catch (error) {
-            console.error('Hash error:', error);
-            // Fallback: direct comparison for development
-            if (enteredPassword === 'chuchu13') {
-                this.isLoggedIn = true;
-                this.updateUIBasedOnAuth();
-                this.renderContent();
-                this.closeModals();
-                document.getElementById('password').value = '';
-            } else {
-                alert('Incorrect password!');
-            }
+        // Use a simple hash function that works everywhere
+        const simpleHash = this.simpleHash(enteredPassword);
+        if (simpleHash === this.passwordHash) {
+            this.isLoggedIn = true;
+            this.updateUIBasedOnAuth();
+            this.renderContent();
+            this.closeModals();
+            document.getElementById('password').value = '';
+        } else {
+            alert('Incorrect password!');
         }
     }
 
