@@ -97,6 +97,7 @@ class PortfolioManager {
         if (enteredPassword === this.password) {
             this.isLoggedIn = true;
             this.updateUIBasedOnAuth();
+            this.renderContent();
             this.closeModals();
             document.getElementById('password').value = '';
         } else {
@@ -107,6 +108,7 @@ class PortfolioManager {
     logout() {
         this.isLoggedIn = false;
         this.updateUIBasedOnAuth();
+        this.renderContent();
     }
 
     updateUIBasedOnAuth() {
