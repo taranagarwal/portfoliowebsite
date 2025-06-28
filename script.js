@@ -16,8 +16,14 @@ class PortfolioManager {
         this.currentFingerprint = await this.generateFingerprint();
         
         // Initialize Supabase if credentials are provided
+        console.log('Supabase URL:', this.supabaseUrl);
+        console.log('Supabase Key (first 10 chars):', this.supabaseKey.substring(0, 10));
+        
         if (this.supabaseUrl !== 'YOUR_SUPABASE_URL' && this.supabaseKey !== 'YOUR_SUPABASE_ANON_KEY') {
             this.supabase = supabase.createClient(this.supabaseUrl, this.supabaseKey);
+            console.log('Supabase client initialized successfully');
+        } else {
+            console.log('Supabase not initialized - using placeholder credentials');
         }
         
         this.data = await this.loadData();
