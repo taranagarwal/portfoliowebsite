@@ -29,47 +29,59 @@
    - **Project URL** (starts with `https://`)
    - **anon public** key (long string under "Project API keys")
 
-## Step 4: Set Up Environment Variables (Secure Method)
+## Step 4: Set Up GitHub Secrets (Secure Method)
 
-### Option A: GitHub Secrets (Recommended)
+1. In your GitHub repository, go to **Settings** → **Secrets and variables** → **Actions**
+2. Click "New repository secret" and add these two secrets:
+   
+   **First Secret:**
+   - Name: `SUPABASE_URL`
+   - Secret: `https://your-project-ref.supabase.co` (your actual Project URL)
+   
+   **Second Secret:**
+   - Name: `SUPABASE_ANON_KEY` 
+   - Secret: `your-anon-public-key-here` (your actual anon public key)
 
-1. In your GitHub repo, go to **Settings** → **Secrets and variables** → **Actions**
-2. Click "New repository secret" and add:
-   - Name: `SUPABASE_URL` Value: `https://your-project-ref.supabase.co`
-   - Name: `SUPABASE_ANON_KEY` Value: `your-anon-public-key-here`
-3. Your GitHub Action will automatically replace these in the code during deployment
+3. Click "Add secret" for each one
 
-### Option B: Direct Code (Less Secure but Simpler)
+**Note**: Don't change anything in your local `script.js` file - the GitHub Action will automatically inject these values during deployment.
 
-1. Open `script.js`
-2. Find lines 8-9 and replace with your actual values:
+## Step 5: Enable GitHub Actions
 
-```javascript
-this.supabaseUrl = 'https://your-project-ref.supabase.co';
-this.supabaseKey = 'your-anon-public-key-here';
-```
+1. In your GitHub repository, go to **Settings** → **Actions** → **General**
+2. Under "Actions permissions", make sure it's set to "Allow all actions and reusable workflows"
+3. Click "Save" if you made any changes
 
-**Note**: Supabase anon keys are designed to be client-side safe, but GitHub Secrets is more secure.
+## Step 6: Deploy with GitHub Actions
 
-## Step 5: Test Locally
+1. After setting up your secrets, **any push to the main branch** will automatically:
+   - Build your site with the Supabase credentials injected
+   - Deploy to GitHub Pages securely
 
-1. Open your local portfolio website
-2. Login and make an edit (add/edit a project or experience)
-3. Check the browser console - you should see "Data saved to Supabase"
-4. Refresh the page - your changes should persist
-5. Open in incognito mode - your changes should be visible to everyone!
-
-## Step 6: Deploy
-
-1. Commit and push your changes:
+2. Push any change to trigger the first deployment:
 ```bash
-git add script.js
-git commit -m "Add Supabase credentials"
+git add .
+git commit -m "Trigger GitHub Actions deployment"  
 git push
 ```
 
-2. Wait 5-10 minutes for GitHub Pages to deploy
-3. Test your live site - admin edits should now persist for all visitors!
+3. Go to **Actions** tab in your GitHub repo to watch the deployment
+4. Once the action completes (green checkmark), your site is live with Supabase!
+
+## Step 7: Test Your Live Site
+
+1. Visit your GitHub Pages URL
+2. Login and make an edit (add/edit a project or experience)  
+3. Open in incognito mode - your changes should be visible to everyone!
+4. Check browser console for "Data saved to Supabase" message
+
+## Step 8: Test Locally (Optional)
+
+To test Supabase locally, you'll need to temporarily add your credentials to `script.js`:
+
+1. Replace the placeholder values in lines 8-9 with your actual credentials
+2. Test locally, then **revert these changes** before committing
+3. The GitHub Action handles credentials for production
 
 ## How It Works
 
@@ -79,12 +91,15 @@ git push
 
 ## Security
 
-- Your anon public key is safe to commit to GitHub - it only allows read/write to your database
-- Only you can edit (fingerprint authentication)
-- Everyone can view the latest data
+- **GitHub Secrets**: Your credentials are stored securely and never exposed in your code
+- **Build-time injection**: Credentials are only added during the automated build process
+- **Fingerprint authentication**: Only you can edit the portfolio
+- **Public viewing**: Everyone can see the latest data you've published
 
 ## Troubleshooting
 
-- **Console errors**: Check your URL and API key are correct
-- **Data not saving**: Check the table was created with exact column names
+- **GitHub Action fails**: Check that your secrets are named exactly `SUPABASE_URL` and `SUPABASE_ANON_KEY`
+- **Console errors**: Verify your Supabase credentials in GitHub Secrets
+- **Data not saving**: Check the table was created with exact column names: `id`, `data_type`, `content`, `updated_at`
 - **Changes not visible**: Wait a few seconds and refresh - database operations can take a moment
+- **Local testing issues**: Remember to temporarily add real credentials to test locally, then revert before committing
