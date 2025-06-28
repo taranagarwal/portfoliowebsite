@@ -1,12 +1,14 @@
 class PortfolioManager {
     constructor() {
         this.isLoggedIn = false;
-        this.passwordHash = '19e67dfe7c23556f0bdfab1f8889bb386c600fab5cacd87e3753751e3fde7ddc';
+        // Authorized browser fingerprint - only Taran's computer
+        this.authorizedFingerprint = 'eyJzY3JlZW4iOiIxNTEy';
         this.data = this.loadData();
         this.init();
     }
 
-    init() {
+    async init() {
+        this.currentFingerprint = await this.generateFingerprint();
         this.bindEvents();
         this.renderContent();
         this.updateUIBasedOnAuth();
@@ -86,14 +88,23 @@ class PortfolioManager {
         });
     }
 
-    simpleHash(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32bit integer
-        }
-        return hash.toString();
+    async generateFingerprint() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillText('Browser fingerprint', 2, 2);
+        
+        const fingerprint = {
+            screen: `${screen.width}x${screen.height}`,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            language: navigator.language,
+            platform: navigator.userAgentData?.platform || navigator.platform,
+            userAgent: navigator.userAgent.slice(0, 50), // First 50 chars only
+            canvas: canvas.toDataURL().slice(0, 50) // First 50 chars of canvas
+        };
+        
+        return btoa(JSON.stringify(fingerprint)).slice(0, 20); // Short unique ID
     }
 
     showLoginModal() {
@@ -102,19 +113,19 @@ class PortfolioManager {
 
     handleLogin(e) {
         e.preventDefault();
-        const enteredPassword = document.getElementById('password').value;
         
-        // Use a simple hash function that works everywhere
-        const simpleHash = this.simpleHash(enteredPassword);
-        if (simpleHash === this.passwordHash) {
-            this.isLoggedIn = true;
-            this.updateUIBasedOnAuth();
-            this.renderContent();
+        // Check if this is Taran's computer
+        if (this.currentFingerprint !== this.authorizedFingerprint) {
+            alert('You are not Taran');
             this.closeModals();
-            document.getElementById('password').value = '';
-        } else {
-            alert('Incorrect password!');
+            return;
         }
+        
+        // If it's Taran's computer, no password needed
+        this.isLoggedIn = true;
+        this.updateUIBasedOnAuth();
+        this.renderContent();
+        this.closeModals();
     }
 
     logout() {
