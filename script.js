@@ -74,7 +74,7 @@ class PortfolioManager {
                     technologies: ["HTML", "CSS", "JavaScript"]
                 }
             ],
-            profilePhoto: "https://via.placeholder.com/200x200"
+            profilePhoto: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f0f0f0'/%3E%3Ccircle cx='100' cy='80' r='30' fill='%23ccc'/%3E%3Cellipse cx='100' cy='160' rx='50' ry='30' fill='%23ccc'/%3E%3C/svg%3E"
         };
     }
 
