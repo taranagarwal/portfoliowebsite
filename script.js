@@ -3,25 +3,58 @@ class PortfolioManager {
         this.isLoggedIn = false;
         // Authorized fingerprints - local and production versions
         this.authorizedFingerprints = ['-1877139945', '806587693'];
-        this.data = this.loadData();
+        
+        // Supabase configuration - replace with your actual values
+        this.supabaseUrl = 'YOUR_SUPABASE_URL';
+        this.supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+        this.supabase = null;
+        
         this.init();
     }
 
     async init() {
         this.currentFingerprint = await this.generateFingerprint();
+        
+        // Initialize Supabase if credentials are provided
+        if (this.supabaseUrl !== 'YOUR_SUPABASE_URL' && this.supabaseKey !== 'YOUR_SUPABASE_ANON_KEY') {
+            this.supabase = supabase.createClient(this.supabaseUrl, this.supabaseKey);
+        }
+        
+        this.data = await this.loadData();
         this.bindEvents();
         this.renderContent();
         this.updateUIBasedOnAuth();
     }
 
-    loadData() {
-        // Try to load from localStorage first (for editing)
+    async loadData() {
+        // If Supabase is available, try to load from database
+        if (this.supabase) {
+            try {
+                const { data, error } = await this.supabase
+                    .from('portfolio_data')
+                    .select('content')
+                    .eq('data_type', 'main')
+                    .order('updated_at', { ascending: false })
+                    .limit(1);
+                
+                if (data && data.length > 0 && !error) {
+                    console.log('Loaded data from Supabase');
+                    return data[0].content;
+                }
+            } catch (error) {
+                console.error('Error loading from Supabase:', error);
+            }
+        }
+        
+        // Fallback to localStorage
         const saved = localStorage.getItem('portfolioData');
         if (saved) {
+            console.log('Loaded data from localStorage');
             return JSON.parse(saved);
         }
         
-        // Default data for public viewing - UPDATE THIS WITH YOUR REAL INFO
+        // Default data
+        console.log('Using default data');
         return {
             about: "Welcome to my portfolio! I'm a passionate developer with experience in creating innovative solutions.",
             experiences: [
@@ -45,8 +78,30 @@ class PortfolioManager {
         };
     }
 
-    saveData() {
+    async saveData() {
+        // Save to localStorage as backup
         localStorage.setItem('portfolioData', JSON.stringify(this.data));
+        
+        // Save to Supabase if available
+        if (this.supabase) {
+            try {
+                const { error } = await this.supabase
+                    .from('portfolio_data')
+                    .insert({
+                        data_type: 'main',
+                        content: this.data,
+                        updated_at: new Date().toISOString()
+                    });
+                
+                if (!error) {
+                    console.log('Data saved to Supabase');
+                } else {
+                    console.error('Error saving to Supabase:', error);
+                }
+            } catch (error) {
+                console.error('Error saving to Supabase:', error);
+            }
+        }
     }
 
     bindEvents() {
@@ -288,10 +343,10 @@ class PortfolioManager {
         `);
     }
 
-    saveAbout() {
+    async saveAbout() {
         const newAbout = document.getElementById('aboutTextarea').value;
         this.data.about = newAbout;
-        this.saveData();
+        await this.saveData();
         this.renderContent();
         this.closeModals();
     }
@@ -399,7 +454,7 @@ class PortfolioManager {
         }
     }
 
-    saveEditedImage() {
+    async saveEditedImage() {
         if (!this.canvas) return;
         
         // Create a new canvas for the circular crop
@@ -425,7 +480,7 @@ class PortfolioManager {
         
         // Save the result
         this.data.profilePhoto = cropCanvas.toDataURL('image/jpeg', 0.9);
-        this.saveData();
+        await this.saveData();
         this.renderContent();
         this.closeModals();
     }
@@ -440,7 +495,7 @@ class PortfolioManager {
         `);
     }
 
-    saveExperience() {
+    async saveExperience() {
         const title = document.getElementById('expTitle').value;
         const company = document.getElementById('expCompany').value;
         const date = document.getElementById('expDate').value;
@@ -455,7 +510,7 @@ class PortfolioManager {
                 description
             };
             this.data.experiences.push(newExp);
-            this.saveData();
+            await this.saveData();
             this.renderContent();
             this.closeModals();
         } else {
@@ -476,7 +531,7 @@ class PortfolioManager {
         `);
     }
 
-    updateExperience(id) {
+    async updateExperience(id) {
         const title = document.getElementById('expTitle').value;
         const company = document.getElementById('expCompany').value;
         const date = document.getElementById('expDate').value;
@@ -486,7 +541,7 @@ class PortfolioManager {
             const expIndex = this.data.experiences.findIndex(e => e.id === id);
             if (expIndex !== -1) {
                 this.data.experiences[expIndex] = { id, title, company, date, description };
-                this.saveData();
+                await this.saveData();
                 this.renderContent();
                 this.closeModals();
             }
@@ -495,10 +550,10 @@ class PortfolioManager {
         }
     }
 
-    deleteExperience(id) {
+    async deleteExperience(id) {
         if (confirm('Are you sure you want to delete this experience?')) {
             this.data.experiences = this.data.experiences.filter(exp => exp.id !== id);
-            this.saveData();
+            await this.saveData();
             this.renderContent();
         }
     }
@@ -508,28 +563,34 @@ class PortfolioManager {
             <input type="text" id="projectTitle" placeholder="Project Title">
             <textarea id="projectDescription" placeholder="Project description..."></textarea>
             <input type="text" id="projectTech" placeholder="Technologies (comma-separated)">
+            <input type="text" id="projectYear" placeholder="Year (e.g., 2024)">
+            <input type="text" id="projectLink" placeholder="Project Link (optional)">
             <button onclick="portfolio.saveProject()">Save</button>
         `);
     }
 
-    saveProject() {
+    async saveProject() {
         const title = document.getElementById('projectTitle').value;
         const description = document.getElementById('projectDescription').value;
         const techString = document.getElementById('projectTech').value;
+        const year = document.getElementById('projectYear').value;
+        const link = document.getElementById('projectLink').value;
 
         if (title && description && techString) {
             const newProject = {
                 id: Date.now(),
                 title,
                 description,
-                technologies: techString.split(',').map(tech => tech.trim())
+                technologies: techString.split(',').map(tech => tech.trim()),
+                year: year || '',
+                link: link || ''
             };
             this.data.projects.push(newProject);
-            this.saveData();
+            await this.saveData();
             this.renderContent();
             this.closeModals();
         } else {
-            alert('Please fill all fields!');
+            alert('Please fill title, description, and technologies!');
         }
     }
 
@@ -541,14 +602,18 @@ class PortfolioManager {
             <input type="text" id="projectTitle" placeholder="Project Title" value="${project.title}">
             <textarea id="projectDescription" placeholder="Project description...">${project.description}</textarea>
             <input type="text" id="projectTech" placeholder="Technologies (comma-separated)" value="${project.technologies.join(', ')}">
+            <input type="text" id="projectYear" placeholder="Year (e.g., 2024)" value="${project.year || ''}">
+            <input type="text" id="projectLink" placeholder="Project Link (optional)" value="${project.link || ''}">
             <button onclick="portfolio.updateProject(${id})">Update</button>
         `);
     }
 
-    updateProject(id) {
+    async updateProject(id) {
         const title = document.getElementById('projectTitle').value;
         const description = document.getElementById('projectDescription').value;
         const techString = document.getElementById('projectTech').value;
+        const year = document.getElementById('projectYear').value;
+        const link = document.getElementById('projectLink').value;
 
         if (title && description && techString) {
             const projectIndex = this.data.projects.findIndex(p => p.id === id);
@@ -557,21 +622,23 @@ class PortfolioManager {
                     id,
                     title,
                     description,
-                    technologies: techString.split(',').map(tech => tech.trim())
+                    technologies: techString.split(',').map(tech => tech.trim()),
+                    year: year || '',
+                    link: link || ''
                 };
-                this.saveData();
+                await this.saveData();
                 this.renderContent();
                 this.closeModals();
             }
         } else {
-            alert('Please fill all fields!');
+            alert('Please fill title, description, and technologies!');
         }
     }
 
-    deleteProject(id) {
+    async deleteProject(id) {
         if (confirm('Are you sure you want to delete this project?')) {
             this.data.projects = this.data.projects.filter(project => project.id !== id);
-            this.saveData();
+            await this.saveData();
             this.renderContent();
         }
     }
