@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Portfolio</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <h1>Taran Agarwal</h1>
+                <div class="auth-buttons">
+                    <button id="exportDataBtn" class="export-btn" style="display: none; margin-right: 10px;">Export Data</button>
+                    <button id="loginBtn" class="login-btn">Login</button>
+                    <button id="logoutBtn" class="logout-btn" style="display: none;">Logout</button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="about" class="section">
+            <div class="container">
+                <h2>About Me</h2>
+                <div class="about-content">
+                    <div class="photo-container">
+                        <img id="profilePhoto" src="https://via.placeholder.com/200x200" alt="Profile Photo">
+                        <button id="editPhotoBtn" class="edit-btn" style="display: none;">Edit Photo</button>
+                        <input type="file" id="photoInput" accept="image/*" style="display: none;">
+                    </div>
+                    <div class="about-text">
+                        <div id="aboutText" class="editable-content">
+                            <p>Welcome to my portfolio! I'm a passionate developer with experience in creating innovative solutions.</p>
+                        </div>
+                        <button id="editAboutBtn" class="edit-btn" style="display: none;">Edit</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="projects" class="section">
+            <div class="container">
+                <h2>Projects</h2>
+                <button id="addProjectBtn" class="add-btn" style="display: none;">Add Project</button>
+                <div id="projectsList" class="projects-list">
+                    <div class="project-item">
+                        <h3>Portfolio Website</h3>
+                        <p>A responsive portfolio website built with HTML, CSS, and JavaScript.</p>
+                        <div class="project-tech">
+                            <span class="tech-tag">HTML</span>
+                            <span class="tech-tag">CSS</span>
+                            <span class="tech-tag">JavaScript</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="experiences" class="section">
+            <div class="container">
+                <h2>Experience</h2>
+                <button id="addExperienceBtn" class="add-btn" style="display: none;">Add Experience</button>
+                <div id="experiencesList" class="experiences-list">
+                    <div class="experience-item">
+                        <h3>Software Developer</h3>
+                        <h4>Tech Company</h4>
+                        <p class="date">2022 - Present</p>
+                        <p>Developed web applications using modern technologies and frameworks.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Login</h2>
+            <form id="loginForm">
+                <input type="password" id="password" placeholder="Enter password" required>
+                <button type="submit">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Modals -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Edit Content</h2>
+            <div id="editForm"></div>
+        </div>
+    </div>
+
+    <!-- Image Editor Modal -->
+    <div id="imageEditorModal" class="modal">
+        <div class="modal-content image-editor">
+            <span class="close">&times;</span>
+            <h2>Edit Photo</h2>
+            <div class="image-editor-container">
+                <div class="canvas-container">
+                    <canvas id="imageCanvas" width="400" height="400"></canvas>
+                    <div class="crop-circle"></div>
+                </div>
+                <div class="editor-controls">
+                    <div class="control-group">
+                        <label>Zoom: <span id="zoomValue">100%</span></label>
+                        <input type="range" id="zoomSlider" min="50" max="300" value="100">
+                    </div>
+                    <div class="control-group">
+                        <label>Move Left/Right:</label>
+                        <input type="range" id="moveX" min="-200" max="200" value="0">
+                    </div>
+                    <div class="control-group">
+                        <label>Move Up/Down:</label>
+                        <input type="range" id="moveY" min="-200" max="200" value="0">
+                    </div>
+                    <div class="editor-buttons">
+                        <button id="resetPosition">Reset</button>
+                        <button id="savePhoto">Save Photo</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
