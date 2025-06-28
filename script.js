@@ -1,8 +1,8 @@
 class PortfolioManager {
     constructor() {
         this.isLoggedIn = false;
-        // Authorized fingerprint with high entropy - only your specific setup
-        this.authorizedFingerprint = '-1877139945';
+        // Authorized fingerprints - local and production versions
+        this.authorizedFingerprints = ['-1877139945', '806587693'];
         this.data = this.loadData();
         this.init();
     }
@@ -10,8 +10,8 @@ class PortfolioManager {
     async init() {
         this.currentFingerprint = await this.generateFingerprint();
         console.log('Current fingerprint:', this.currentFingerprint);
-        console.log('Authorized fingerprint:', this.authorizedFingerprint);
-        console.log('Match:', this.currentFingerprint === this.authorizedFingerprint);
+        console.log('Authorized fingerprints:', this.authorizedFingerprints);
+        console.log('Match:', this.authorizedFingerprints.includes(this.currentFingerprint));
         this.bindEvents();
         this.renderContent();
         this.updateUIBasedOnAuth();
@@ -160,7 +160,7 @@ class PortfolioManager {
 
     handleDirectLogin() {
         // Check if this is Taran's specific browser/computer setup
-        if (this.currentFingerprint === this.authorizedFingerprint) {
+        if (this.authorizedFingerprints.includes(this.currentFingerprint)) {
             this.isLoggedIn = true;
             this.updateUIBasedOnAuth();
             this.renderContent();
