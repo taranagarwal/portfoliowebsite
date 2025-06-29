@@ -174,9 +174,16 @@ class PortfolioManager {
             
             // Set cursor position
             if (replacement.includes('**') || replacement.includes('*') || replacement.includes('`')) {
-                // If we added formatting, place cursor after the formatted text
-                const newCursorPos = beforeSelection.length + replacement.length;
-                textarea.setSelectionRange(newCursorPos, newCursorPos);
+                // Check if this is empty formatting (like ****, **, or ``)
+                if ((replacement === '****') || (replacement === '**') || (replacement === '``')) {
+                    // Place cursor in the middle of empty formatting
+                    const middlePos = beforeSelection.length + Math.floor(replacement.length / 2);
+                    textarea.setSelectionRange(middlePos, middlePos);
+                } else {
+                    // If we added formatting to selected text, place cursor after the formatted text
+                    const newCursorPos = beforeSelection.length + replacement.length;
+                    textarea.setSelectionRange(newCursorPos, newCursorPos);
+                }
             } else {
                 // If we removed formatting, select the unformatted text
                 const newCursorStart = beforeSelection.length;
