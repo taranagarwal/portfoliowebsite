@@ -8,6 +8,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read
 
 jobs:
   deploy:
@@ -22,10 +23,10 @@ jobs:
     - name: Replace environment variables
       run: |
         echo "Replacing environment variables..."
-        sed -i "s/YOUR_SUPABASE_URL/${{ secrets.SUPABASE_URL }}/g" script.js
-        sed -i "s/YOUR_SUPABASE_ANON_KEY/${{ secrets.SUPABASE_ANON_KEY }}/g" script.js
+        sed -i "s|YOUR_SUPABASE_URL|${{ secrets.SUPABASE_URL }}|g" script.js
+        sed -i "s|YOUR_SUPABASE_ANON_KEY|${{ secrets.SUPABASE_ANON_KEY }}|g" script.js
         echo "Checking if replacement worked:"
-        grep -n "SUPABASE_URL\|SUPABASE_KEY" script.js | head -5
+        grep -n "supabaseUrl\|supabaseKey" script.js | head -5
     
     - name: Setup Pages
       uses: actions/configure-pages@v4
