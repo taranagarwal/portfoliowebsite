@@ -186,6 +186,23 @@ class PortfolioManager {
         return hash.toString();
     }
 
+    formatUrl(url) {
+        if (!url) return '';
+        
+        // If URL already has protocol, return as is
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        }
+        
+        // If URL starts with www. or has a domain extension, add https://
+        if (url.startsWith('www.') || /\.[a-z]{2,}($|\/)/.test(url)) {
+            return `https://${url}`;
+        }
+        
+        // Otherwise, assume it's a relative path and return as is
+        return url;
+    }
+
     handleDirectLogin() {
         // Check if this is Taran's specific browser/computer setup
         if (this.authorizedFingerprints.includes(this.currentFingerprint)) {
@@ -299,7 +316,7 @@ class PortfolioManager {
             projectElement.innerHTML = `
                 <h3>${project.title} ${project.year ? `(${project.year})` : ''}</h3>
                 <p>${project.description}</p>
-                ${project.link ? `<p><a href="${project.link}" target="_blank" style="color: #3498db; text-decoration: none;">🔗 View Project</a></p>` : ''}
+                ${project.link ? `<p><a href="${this.formatUrl(project.link)}" target="_blank" style="color: #3498db; text-decoration: none;">🔗 View Project</a></p>` : ''}
                 <div class="project-tech">
                     ${project.technologies.map(tech => `<span class="tech-tag">${tech}</span>`).join('')}
                 </div>
