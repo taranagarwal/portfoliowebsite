@@ -21,10 +21,15 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Replace environment variables
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       run: |
         echo "Replacing environment variables..."
-        sed -i "s|YOUR_SUPABASE_URL|${{ secrets.SUPABASE_URL }}|g" script.js
-        sed -i "s|YOUR_SUPABASE_ANON_KEY|${{ secrets.SUPABASE_ANON_KEY }}|g" script.js
+        echo "URL starts with: ${SUPABASE_URL:0:20}..."
+        echo "Key starts with: ${SUPABASE_ANON_KEY:0:20}..."
+        sed -i "s|YOUR_SUPABASE_URL|${SUPABASE_URL}|g" script.js
+        sed -i "s|YOUR_SUPABASE_ANON_KEY|${SUPABASE_ANON_KEY}|g" script.js
         echo "Checking if replacement worked:"
         grep -n "supabaseUrl\|supabaseKey" script.js | head -5
     
