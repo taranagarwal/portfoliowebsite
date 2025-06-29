@@ -335,6 +335,108 @@ main {
     background-color: #2980b9;
 }
 
+/* Project Links */
+.project-links {
+    margin: 10px 0;
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.project-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #3498db;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    border: 1px solid #3498db;
+}
+
+.project-link:hover {
+    background-color: #3498db;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.project-link svg {
+    transition: transform 0.3s ease;
+}
+
+.project-link:hover svg {
+    transform: scale(1.1);
+}
+
+/* Link Management Form Styles */
+#projectLinks {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px 0;
+    background-color: #fafafa;
+}
+
+#projectLinks label {
+    margin-bottom: 10px;
+    position: sticky;
+    top: 0;
+    background-color: #fafafa;
+    padding-bottom: 5px;
+    z-index: 1;
+}
+
+.link-group {
+    display: grid;
+    grid-template-columns: 1fr 2fr auto;
+    gap: 10px;
+    align-items: center;
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+}
+
+.link-group input {
+    margin: 0;
+}
+
+.remove-link-btn {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    min-width: auto;
+}
+
+.remove-link-btn:hover {
+    background-color: #c0392b;
+}
+
+.add-link-btn {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 10px 0;
+    transition: background-color 0.3s ease;
+}
+
+.add-link-btn:hover {
+    background-color: #229954;
+}
+
 /* Modal Styles */
 .modal {
     display: none;
@@ -349,11 +451,13 @@ main {
 
 .modal-content {
     background-color: white;
-    margin: 15% auto;
+    margin: 5% auto;
     padding: 20px;
     border-radius: 10px;
     width: 80%;
     max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
     position: relative;
 }
 
