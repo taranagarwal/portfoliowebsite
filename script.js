@@ -212,10 +212,16 @@ class PortfolioManager {
         return text.substring(0, maxLength) + '...';
     }
 
+    showDescriptionFromButton(button, title) {
+        const description = button.getAttribute('data-description').replace(/\\n/g, '\n').replace(/&quot;/g, '"');
+        this.showReadMoreModal(title, description);
+    }
+
     showReadMoreModal(title, fullDescription) {
+        const formattedDescription = fullDescription.replace(/\n/g, '<br>');
         this.showEditModal(title, `
             <div style="max-height: 400px; overflow-y: auto; padding: 10px;">
-                <p style="line-height: 1.6; margin: 0;">${fullDescription}</p>
+                <p style="line-height: 1.6; margin: 0; white-space: pre-wrap;">${formattedDescription}</p>
             </div>
         `);
     }
@@ -292,7 +298,7 @@ class PortfolioManager {
                 <p class="date">${exp.date}</p>
                 ${hasDescription ? `
                     <div class="description-container">
-                        <button class="view-description-btn" onclick="portfolio.showReadMoreModal('${exp.company} - ${exp.title}', '${exp.description.replace(/'/g, "\\'")}')">View Description</button>
+                        <button class="view-description-btn" data-description="${exp.description.replace(/"/g, '&quot;').replace(/\n/g, '\\n')}" onclick="portfolio.showDescriptionFromButton(this, '${exp.company} - ${exp.title}')">View Description</button>
                     </div>
                 ` : ''}
                 ${this.isLoggedIn ? `
@@ -329,7 +335,7 @@ class PortfolioManager {
             projectElement.innerHTML = `
                 <h3>${project.title} ${project.year ? `(${project.year})` : ''}</h3>
                 <div class="description-container">
-                    <p>${truncatedDescription}${needsReadMore ? ` <span class="read-more" onclick="portfolio.showReadMoreModal('${project.title}', '${project.description.replace(/'/g, "\\'")}')">Read more</span>` : ''}</p>
+                    <p>${truncatedDescription}${needsReadMore ? ` <span class="read-more" data-description="${project.description.replace(/"/g, '&quot;').replace(/\n/g, '\\n')}" onclick="portfolio.showDescriptionFromButton(this, '${project.title}')">Read more</span>` : ''}</p>
                 </div>
                 ${this.renderProjectLinks(project)}
                 <div class="project-tech">
