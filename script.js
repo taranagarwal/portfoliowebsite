@@ -116,8 +116,9 @@ class PortfolioManager {
             close.addEventListener('click', () => this.closeModals());
         });
 
-        window.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal')) {
+        // Add escape key to close modals
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
                 this.closeModals();
             }
         });
@@ -140,10 +141,8 @@ class PortfolioManager {
         const textarea = e.target;
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
-        const selectedText = textarea.value.substring(start, end);
         
         let replacement = '';
-        let cursorOffset = 0;
         let newStart = start;
         let newEnd = end;
         
@@ -193,7 +192,6 @@ class PortfolioManager {
         // Check if we're inside formatted text by looking at surrounding characters
         const beforeStart = Math.max(0, start - startDelim.length);
         const afterEnd = Math.min(text.length, end + endDelim.length);
-        const expandedText = text.substring(beforeStart, afterEnd);
         
         // Check if selection already has the formatting
         if (selectedText.startsWith(startDelim) && selectedText.endsWith(endDelim)) {
