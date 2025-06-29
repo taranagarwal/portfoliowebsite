@@ -18,12 +18,16 @@ class PortfolioManager {
         // Initialize Supabase if credentials are provided
         console.log('Supabase URL:', this.supabaseUrl);
         console.log('Supabase Key (first 10 chars):', this.supabaseKey.substring(0, 10));
+        console.log('URL check:', this.supabaseUrl !== 'YOUR_SUPABASE_URL');
+        console.log('Key check:', this.supabaseKey !== 'YOUR_SUPABASE_ANON_KEY');
+        console.log('URL includes placeholder?', this.supabaseUrl.includes('YOUR_SUPABASE_URL'));
+        console.log('Key includes placeholder?', this.supabaseKey.includes('YOUR_SUPABASE_ANON_KEY'));
         
-        if (this.supabaseUrl !== 'YOUR_SUPABASE_URL' && this.supabaseKey !== 'YOUR_SUPABASE_ANON_KEY') {
+        if (this.supabaseUrl.startsWith('https://') && this.supabaseKey.startsWith('eyJ')) {
             this.supabase = supabase.createClient(this.supabaseUrl, this.supabaseKey);
             console.log('Supabase client initialized successfully');
         } else {
-            console.log('Supabase not initialized - using placeholder credentials');
+            console.log('Supabase not initialized - invalid credentials format');
         }
         
         this.data = await this.loadData();
