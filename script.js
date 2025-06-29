@@ -96,11 +96,6 @@ class PortfolioManager {
         document.getElementById('editPhotoBtn').addEventListener('click', () => this.editPhoto());
         document.getElementById('addExperienceBtn').addEventListener('click', () => this.addExperience());
         document.getElementById('addProjectBtn').addEventListener('click', () => this.addProject());
-        
-        // Export button
-        if (document.getElementById('exportDataBtn')) {
-            document.getElementById('exportDataBtn').addEventListener('click', () => this.exportData());
-        }
 
         // Photo upload
         document.getElementById('photoInput').addEventListener('change', (e) => this.handlePhotoUpload(e));
@@ -233,18 +228,15 @@ class PortfolioManager {
         const editElements = document.querySelectorAll('.edit-btn, .add-btn');
         const loginBtn = document.getElementById('loginBtn');
         const logoutBtn = document.getElementById('logoutBtn');
-        const exportBtn = document.getElementById('exportDataBtn');
 
         if (this.isLoggedIn) {
             editElements.forEach(el => el.style.display = 'inline-block');
             loginBtn.style.display = 'none';
             logoutBtn.style.display = 'inline-block';
-            exportBtn.style.display = 'inline-block';
         } else {
             editElements.forEach(el => el.style.display = 'none');
             loginBtn.style.display = 'inline-block';
             logoutBtn.style.display = 'none';
-            exportBtn.style.display = 'none';
         }
     }
 
@@ -287,8 +279,10 @@ class PortfolioManager {
                 <p class="date">${exp.date}</p>
                 <p>${exp.description}</p>
                 ${this.isLoggedIn ? `
-                    <button class="edit-btn" onclick="portfolio.editExperience(${exp.id})" style="position: absolute; top: 10px; right: 80px; padding: 5px 10px; font-size: 12px;">Edit</button>
-                    <button class="delete-btn" onclick="portfolio.deleteExperience(${exp.id})">Delete</button>
+                    <div class="item-buttons">
+                        <button class="edit-btn" onclick="portfolio.editExperience(${exp.id})">Edit</button>
+                        <button class="delete-btn" onclick="portfolio.deleteExperience(${exp.id})">Delete</button>
+                    </div>
                 ` : ''}
             `;
             container.appendChild(expElement);
@@ -303,14 +297,17 @@ class PortfolioManager {
             const projectElement = document.createElement('div');
             projectElement.className = 'project-item';
             projectElement.innerHTML = `
-                <h3>${project.title}</h3>
+                <h3>${project.title} ${project.year ? `(${project.year})` : ''}</h3>
                 <p>${project.description}</p>
+                ${project.link ? `<p><a href="${project.link}" target="_blank" style="color: #3498db; text-decoration: none;">🔗 View Project</a></p>` : ''}
                 <div class="project-tech">
                     ${project.technologies.map(tech => `<span class="tech-tag">${tech}</span>`).join('')}
                 </div>
                 ${this.isLoggedIn ? `
-                    <button class="edit-btn" onclick="portfolio.editProject(${project.id})" style="position: absolute; top: 10px; right: 80px; padding: 5px 10px; font-size: 12px;">Edit</button>
-                    <button class="delete-btn" onclick="portfolio.deleteProject(${project.id})">Delete</button>
+                    <div class="item-buttons">
+                        <button class="edit-btn" onclick="portfolio.editProject(${project.id})">Edit</button>
+                        <button class="delete-btn" onclick="portfolio.deleteProject(${project.id})">Delete</button>
+                    </div>
                 ` : ''}
             `;
             container.appendChild(projectElement);
@@ -637,22 +634,6 @@ class PortfolioManager {
         });
     }
 
-    exportData() {
-        // Create a formatted JavaScript object that can be pasted into the code
-        const exportData = JSON.stringify(this.data, null, 8);
-        
-        this.showEditModal('Export Portfolio Data', `
-            <p>Copy this data and replace the default data in your script.js file (around line 23-43):</p>
-            <textarea readonly style="width: 100%; height: 300px; font-family: monospace; font-size: 12px;">${exportData}</textarea>
-            <p style="margin-top: 10px; font-size: 14px; color: #666;">
-                <strong>Instructions:</strong><br>
-                1. Copy the text above<br>
-                2. In script.js, find the "return {" section in loadData()<br>
-                3. Replace the default data with your copied data<br>
-                4. Deploy your updated files
-            </p>
-        `);
-    }
 }
 
 // Initialize the portfolio manager
