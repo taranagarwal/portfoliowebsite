@@ -550,7 +550,7 @@ class PortfolioManager {
                     </label>
                 </div>
             </div>
-            <textarea id="expDescription" placeholder="Job description..."></textarea>
+            <textarea id="expDescription" placeholder="Job description (optional)..."></textarea>
             <button onclick="portfolio.saveExperience()">Save</button>
         `);
     }
@@ -581,7 +581,7 @@ class PortfolioManager {
         const isCurrent = document.getElementById('expCurrent').checked;
         const description = document.getElementById('expDescription').value;
 
-        if (title && company && startMonth && startYear && description) {
+        if (title && company && startMonth && startYear) {
             const monthNames = [
                 'January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'
@@ -616,7 +616,7 @@ class PortfolioManager {
             this.renderContent();
             this.closeModals();
         } else {
-            alert('Please fill all required fields!');
+            alert('Please fill title, company, and start date!');
         }
     }
 
@@ -658,7 +658,7 @@ class PortfolioManager {
                     </label>
                 </div>
             </div>
-            <textarea id="expDescription" placeholder="Job description...">${exp.description}</textarea>
+            <textarea id="expDescription" placeholder="Job description (optional)...">${exp.description}</textarea>
             <button onclick="portfolio.updateExperience(${id})">Update</button>
         `);
     }
@@ -673,7 +673,7 @@ class PortfolioManager {
         const isCurrent = document.getElementById('expCurrent').checked;
         const description = document.getElementById('expDescription').value;
 
-        if (title && company && startMonth && startYear && description) {
+        if (title && company && startMonth && startYear) {
             const monthNames = [
                 'January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'
@@ -711,7 +711,7 @@ class PortfolioManager {
                 this.closeModals();
             }
         } else {
-            alert('Please fill all required fields!');
+            alert('Please fill title, company, and start date!');
         }
     }
 
@@ -726,7 +726,7 @@ class PortfolioManager {
     addProject() {
         this.showEditModal('Add Project', `
             <input type="text" id="projectTitle" placeholder="Project Title">
-            <textarea id="projectDescription" placeholder="Project description..."></textarea>
+            <textarea id="projectDescription" placeholder="Project description (optional)..."></textarea>
             <input type="text" id="projectTech" placeholder="Technologies (comma-separated)">
             <select id="projectYear">
                 <option value="">Select Year</option>
@@ -744,7 +744,7 @@ class PortfolioManager {
         const year = document.getElementById('projectYear').value;
         const link = document.getElementById('projectLink').value;
 
-        if (title && description && techString) {
+        if (title && techString) {
             const newProject = {
                 id: Date.now(),
                 title,
@@ -758,7 +758,7 @@ class PortfolioManager {
             this.renderContent();
             this.closeModals();
         } else {
-            alert('Please fill title, description, and technologies!');
+            alert('Please fill title and technologies!');
         }
     }
 
@@ -768,7 +768,7 @@ class PortfolioManager {
 
         this.showEditModal('Edit Project', `
             <input type="text" id="projectTitle" placeholder="Project Title" value="${project.title}">
-            <textarea id="projectDescription" placeholder="Project description...">${project.description}</textarea>
+            <textarea id="projectDescription" placeholder="Project description (optional)...">${project.description}</textarea>
             <input type="text" id="projectTech" placeholder="Technologies (comma-separated)" value="${project.technologies.join(', ')}">
             <select id="projectYear">
                 <option value="">Select Year</option>
@@ -786,7 +786,7 @@ class PortfolioManager {
         const year = document.getElementById('projectYear').value;
         const link = document.getElementById('projectLink').value;
 
-        if (title && description && techString) {
+        if (title && techString) {
             const projectIndex = this.data.projects.findIndex(p => p.id === id);
             if (projectIndex !== -1) {
                 this.data.projects[projectIndex] = {
@@ -802,7 +802,7 @@ class PortfolioManager {
                 this.closeModals();
             }
         } else {
-            alert('Please fill title, description, and technologies!');
+            alert('Please fill title and technologies!');
         }
     }
 
