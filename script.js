@@ -625,8 +625,8 @@ class PortfolioManager {
         if (!exp) return;
 
         this.showEditModal('Edit Experience', `
-            <input type="text" id="expTitle" placeholder="Job Title" value="${exp.title}">
-            <input type="text" id="expCompany" placeholder="Company" value="${exp.company}">
+            <input type="text" id="expTitle" placeholder="Company" value="${exp.company}">
+            <input type="text" id="expCompany" placeholder="Job title" value="${exp.title}">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0;">
                 <div>
                     <label>Start Date:</label>
