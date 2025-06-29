@@ -437,6 +437,17 @@ main {
     background-color: #229954;
 }
 
+/* Code formatting */
+code {
+    background-color: #f1f3f4;
+    color: #d73a49;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.85em;
+    border: 1px solid #e1e4e8;
+}
+
 /* Modal Styles */
 .modal {
     display: none;

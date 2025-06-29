@@ -121,6 +121,120 @@ class PortfolioManager {
                 this.closeModals();
             }
         });
+
+        // Add formatting keyboard shortcuts to textareas
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'TEXTAREA' && (e.target.id === 'expDescription' || e.target.id === 'projectDescription')) {
+                this.handleTextareaFormatting(e);
+            }
+        });
+    }
+
+    handleTextareaFormatting(e) {
+        // Check for Command key on Mac (metaKey) or Control key on Windows (ctrlKey)
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const modifierKey = isMac ? e.metaKey : e.ctrlKey;
+        
+        if (!modifierKey) return;
+        
+        const textarea = e.target;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selectedText = textarea.value.substring(start, end);
+        
+        let replacement = '';
+        let cursorOffset = 0;
+        let newStart = start;
+        let newEnd = end;
+        
+        if (e.key === 'b' || e.key === 'B') {
+            e.preventDefault();
+            const result = this.toggleFormatting(textarea.value, start, end, '**', '**');
+            replacement = result.replacement;
+            newStart = result.newStart;
+            newEnd = result.newEnd;
+        } else if (e.key === 'i' || e.key === 'I') {
+            e.preventDefault();
+            const result = this.toggleFormatting(textarea.value, start, end, '*', '*');
+            replacement = result.replacement;
+            newStart = result.newStart;
+            newEnd = result.newEnd;
+        } else if (e.key === 'k' || e.key === 'K') {
+            e.preventDefault();
+            const result = this.toggleFormatting(textarea.value, start, end, '`', '`');
+            replacement = result.replacement;
+            newStart = result.newStart;
+            newEnd = result.newEnd;
+        }
+        
+        if (replacement !== '') {
+            // Replace the text
+            const beforeSelection = textarea.value.substring(0, Math.min(newStart, start));
+            const afterSelection = textarea.value.substring(Math.max(newEnd, end));
+            textarea.value = beforeSelection + replacement + afterSelection;
+            
+            // Set cursor position
+            if (replacement.includes('**') || replacement.includes('*') || replacement.includes('`')) {
+                // If we added formatting, place cursor after the formatted text
+                const newCursorPos = beforeSelection.length + replacement.length;
+                textarea.setSelectionRange(newCursorPos, newCursorPos);
+            } else {
+                // If we removed formatting, select the unformatted text
+                const newCursorStart = beforeSelection.length;
+                const newCursorEnd = beforeSelection.length + replacement.length;
+                textarea.setSelectionRange(newCursorStart, newCursorEnd);
+            }
+        }
+    }
+
+    toggleFormatting(text, start, end, startDelim, endDelim) {
+        const selectedText = text.substring(start, end);
+        
+        // Check if we're inside formatted text by looking at surrounding characters
+        const beforeStart = Math.max(0, start - startDelim.length);
+        const afterEnd = Math.min(text.length, end + endDelim.length);
+        const expandedText = text.substring(beforeStart, afterEnd);
+        
+        // Check if selection already has the formatting
+        if (selectedText.startsWith(startDelim) && selectedText.endsWith(endDelim)) {
+            // Remove formatting from selected text
+            const unformatted = selectedText.substring(startDelim.length, selectedText.length - endDelim.length);
+            return {
+                replacement: unformatted,
+                newStart: start,
+                newEnd: end
+            };
+        }
+        
+        // Check if selection is inside formatted text
+        const beforeText = text.substring(beforeStart, start);
+        const afterText = text.substring(end, afterEnd);
+        
+        if (beforeText.endsWith(startDelim) && afterText.startsWith(endDelim)) {
+            // Remove surrounding formatting
+            return {
+                replacement: selectedText,
+                newStart: beforeStart,
+                newEnd: afterEnd
+            };
+        }
+        
+        // Add formatting
+        if (selectedText) {
+            return {
+                replacement: `${startDelim}${selectedText}${endDelim}`,
+                newStart: start,
+                newEnd: end
+            };
+        } else {
+            // No selection, add empty formatting
+            const emptyFormatting = `${startDelim}${endDelim}`;
+            return {
+                replacement: emptyFormatting,
+                newStart: start,
+                newEnd: end
+            };
+        }
     }
 
     async generateFingerprint() {
@@ -218,12 +332,38 @@ class PortfolioManager {
     }
 
     showReadMoreModal(title, fullDescription) {
-        const formattedDescription = fullDescription.replace(/\n/g, '<br>');
+        const formattedDescription = this.formatMarkdown(fullDescription);
         this.showEditModal(title, `
             <div style="max-height: 400px; overflow-y: auto; padding: 10px;">
-                <p style="line-height: 1.6; margin: 0; white-space: pre-wrap;">${formattedDescription}</p>
+                <div style="line-height: 1.6; margin: 0; white-space: pre-wrap;">${formattedDescription}</div>
             </div>
         `);
+    }
+
+    formatMarkdown(text, includeLineBreaks = true) {
+        // Use placeholders to avoid conflicts between different markdown formats
+        let formatted = text
+            // First, replace code with a placeholder
+            .replace(/`([^`]+?)`/g, '{{CODE_START}}$1{{CODE_END}}')
+            // Then replace bold with a placeholder
+            .replace(/\*\*([^*]+?)\*\*/g, '{{BOLD_START}}$1{{BOLD_END}}')
+            // Then replace remaining single asterisks with italic
+            .replace(/\*([^*]+?)\*/g, '<em>$1</em>')
+            // Replace placeholders with actual HTML tags
+            .replace(/\{\{CODE_START\}\}/g, '<code>')
+            .replace(/\{\{CODE_END\}\}/g, '</code>')
+            .replace(/\{\{BOLD_START\}\}/g, '<strong>')
+            .replace(/\{\{BOLD_END\}\}/g, '</strong>');
+        
+        // Only add line breaks if requested (for full modal view)
+        if (includeLineBreaks) {
+            formatted = formatted.replace(/\n/g, '<br>');
+        } else {
+            // For preview, replace newlines with spaces
+            formatted = formatted.replace(/\n/g, ' ');
+        }
+        
+        return formatted;
     }
 
     togglePreviewMode() {
@@ -329,7 +469,7 @@ class PortfolioManager {
         sortedProjects.forEach((project, index) => {
             const projectElement = document.createElement('div');
             projectElement.className = 'project-item';
-            const truncatedDescription = this.truncateText(project.description, 150);
+            const truncatedDescription = this.formatMarkdown(this.truncateText(project.description, 150), false);
             const needsReadMore = project.description && project.description.length > 150;
             
             projectElement.innerHTML = `
