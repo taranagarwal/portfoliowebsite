@@ -4,9 +4,9 @@ class PortfolioManager {
         // Authorized fingerprints - local and production versions
         this.authorizedFingerprints = ['-1877139945', '806587693'];
         
-        // Supabase configuration - replace with your actual values
-        this.supabaseUrl = 'YOUR_SUPABASE_URL';
-        this.supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+        // Supabase configuration - add your actual values here
+        this.supabaseUrl = 'YOUR_SUPABASE_URL'; // Replace with your Supabase project URL
+        this.supabaseKey = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your anon public key
         this.supabase = null;
         
         this.init();
