@@ -2,7 +2,7 @@ class PortfolioManager {
     constructor() {
         this.isLoggedIn = false;
         // Authorized fingerprints - local and production versions
-        this.authorizedFingerprints = ['-1877139945', '806587693'];
+        this.authorizedFingerprints = ['806587693', 'YOUR_PRODUCTION_FINGERPRINT'];
         
         // Supabase configuration - add your actual values here
         this.supabaseUrl = 'YOUR_SUPABASE_URL'; // Replace with your Supabase project URL
@@ -23,6 +23,11 @@ class PortfolioManager {
             if (this.supabaseServiceKey && this.supabaseServiceKey.startsWith('eyJ')) {
                 this.supabaseAdmin = supabase.createClient(this.supabaseUrl, this.supabaseServiceKey);
             }
+        }
+        
+        // Auto-login if authorized user
+        if (this.authorizedFingerprints.includes(this.currentFingerprint)) {
+            this.isLoggedIn = true;
         }
         
         this.data = await this.loadData();
@@ -87,9 +92,7 @@ class PortfolioManager {
 
     bindEvents() {
         // Auth events
-        document.getElementById('loginBtn').addEventListener('click', () => this.handleDirectLogin());
-        document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
-        document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
+        document.getElementById('previewBtn').addEventListener('click', () => this.togglePreviewMode());
 
         // Edit events
         document.getElementById('editAboutBtn').addEventListener('click', () => this.editAbout());
@@ -203,57 +206,45 @@ class PortfolioManager {
         return url;
     }
 
-    handleDirectLogin() {
-        // Check if this is Taran's specific browser/computer setup
+    truncateText(text, maxLength = 150) {
+        if (!text || text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
+    }
+
+    showReadMoreModal(title, fullDescription) {
+        this.showEditModal(title, `
+            <div style="max-height: 400px; overflow-y: auto; padding: 10px;">
+                <p style="line-height: 1.6; margin: 0;">${fullDescription}</p>
+            </div>
+        `);
+    }
+
+    togglePreviewMode() {
         if (this.authorizedFingerprints.includes(this.currentFingerprint)) {
-            this.isLoggedIn = true;
+            this.isLoggedIn = !this.isLoggedIn;
             this.updateUIBasedOnAuth();
             this.renderContent();
-        } else {
-            alert('You are not Taran');
         }
-    }
-
-    showLoginModal() {
-        document.getElementById('loginModal').style.display = 'block';
-    }
-
-    handleLogin(e) {
-        e.preventDefault();
-        
-        // Check if this is Taran's computer
-        if (this.currentFingerprint !== this.authorizedFingerprint) {
-            alert('You are not Taran');
-            this.closeModals();
-            return;
-        }
-        
-        // If it's Taran's computer, no password needed
-        this.isLoggedIn = true;
-        this.updateUIBasedOnAuth();
-        this.renderContent();
-        this.closeModals();
-    }
-
-    logout() {
-        this.isLoggedIn = false;
-        this.updateUIBasedOnAuth();
-        this.renderContent();
     }
 
     updateUIBasedOnAuth() {
         const editElements = document.querySelectorAll('.edit-btn, .add-btn');
-        const loginBtn = document.getElementById('loginBtn');
-        const logoutBtn = document.getElementById('logoutBtn');
+        const previewBtn = document.getElementById('previewBtn');
 
-        if (this.isLoggedIn) {
-            editElements.forEach(el => el.style.display = 'inline-block');
-            loginBtn.style.display = 'none';
-            logoutBtn.style.display = 'inline-block';
+        // Only show preview button if user is authorized
+        if (this.authorizedFingerprints.includes(this.currentFingerprint)) {
+            previewBtn.style.display = 'inline-block';
+            
+            if (this.isLoggedIn) {
+                editElements.forEach(el => el.style.display = 'inline-block');
+                previewBtn.textContent = 'Preview Mode';
+            } else {
+                editElements.forEach(el => el.style.display = 'none');
+                previewBtn.textContent = 'Edit Mode';
+            }
         } else {
+            previewBtn.style.display = 'none';
             editElements.forEach(el => el.style.display = 'none');
-            loginBtn.style.display = 'inline-block';
-            logoutBtn.style.display = 'none';
         }
     }
 
@@ -290,11 +281,16 @@ class PortfolioManager {
         sortedExperiences.forEach(exp => {
             const expElement = document.createElement('div');
             expElement.className = 'experience-item';
+            const truncatedDescription = this.truncateText(exp.description, 150);
+            const needsReadMore = exp.description && exp.description.length > 150;
+            
             expElement.innerHTML = `
                 <h3>${exp.title}</h3>
                 <h4>${exp.company}</h4>
                 <p class="date">${exp.date}</p>
-                <p>${exp.description}</p>
+                <div class="description-container">
+                    <p>${truncatedDescription}${needsReadMore ? ` <span class="read-more" onclick="portfolio.showReadMoreModal('${exp.title} at ${exp.company}', '${exp.description.replace(/'/g, "\\'")}')">Read more</span>` : ''}</p>
+                </div>
                 ${this.isLoggedIn ? `
                     <div class="item-buttons">
                         <button class="edit-btn" onclick="portfolio.editExperience(${exp.id})">Edit</button>
@@ -313,9 +309,14 @@ class PortfolioManager {
         this.data.projects.forEach(project => {
             const projectElement = document.createElement('div');
             projectElement.className = 'project-item';
+            const truncatedDescription = this.truncateText(project.description, 150);
+            const needsReadMore = project.description && project.description.length > 150;
+            
             projectElement.innerHTML = `
                 <h3>${project.title} ${project.year ? `(${project.year})` : ''}</h3>
-                <p>${project.description}</p>
+                <div class="description-container">
+                    <p>${truncatedDescription}${needsReadMore ? ` <span class="read-more" onclick="portfolio.showReadMoreModal('${project.title}', '${project.description.replace(/'/g, "\\'")}')">Read more</span>` : ''}</p>
+                </div>
                 ${project.link ? `<p><a href="${this.formatUrl(project.link)}" target="_blank" style="color: #3498db; text-decoration: none;">🔗 View Project</a></p>` : ''}
                 <div class="project-tech">
                     ${project.technologies.map(tech => `<span class="tech-tag">${tech}</span>`).join('')}

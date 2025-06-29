@@ -25,11 +25,13 @@ jobs:
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        PRODUCTION_FINGERPRINT: ${{ secrets.PRODUCTION_FINGERPRINT }}
       run: |
         echo "Replacing environment variables..."
         sed -i "s|YOUR_SUPABASE_URL|${SUPABASE_URL}|g" script.js
         sed -i "s|YOUR_SUPABASE_ANON_KEY|${SUPABASE_ANON_KEY}|g" script.js
         sed -i "s|YOUR_SUPABASE_SERVICE_KEY|${SUPABASE_SERVICE_KEY}|g" script.js
+        sed -i "s|YOUR_PRODUCTION_FINGERPRINT|${PRODUCTION_FINGERPRINT}|g" script.js
         echo "Environment variables replaced successfully"
     
     - name: Setup Pages

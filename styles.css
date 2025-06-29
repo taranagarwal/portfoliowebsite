@@ -88,12 +88,12 @@ button {
     transition: background-color 0.3s ease;
 }
 
-.login-btn, .logout-btn {
+.preview-btn {
     background-color: #3498db;
     color: white;
 }
 
-.login-btn:hover, .logout-btn:hover {
+.preview-btn:hover {
     background-color: #2980b9;
 }
 
@@ -188,6 +188,9 @@ main {
     border-radius: 8px;
     border-left: 4px solid #3498db;
     position: relative;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
 }
 
 .experience-item h3 {
@@ -251,6 +254,9 @@ main {
     border-radius: 8px;
     border-top: 4px solid #3498db;
     position: relative;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
 }
 
 .project-item h3 {
@@ -271,6 +277,23 @@ main {
     font-size: 12px;
     margin-right: 5px;
     margin-bottom: 5px;
+}
+
+/* Description container and read more styles */
+.description-container {
+    flex-grow: 1;
+    margin-bottom: 10px;
+}
+
+.read-more {
+    color: #3498db;
+    cursor: pointer;
+    font-weight: 500;
+    text-decoration: underline;
+}
+
+.read-more:hover {
+    color: #2980b9;
 }
 
 /* Modal Styles */
