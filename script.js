@@ -16,18 +16,11 @@ class PortfolioManager {
         this.currentFingerprint = await this.generateFingerprint();
         
         // Initialize Supabase if credentials are provided
-        console.log('Supabase URL:', this.supabaseUrl);
-        console.log('Supabase Key (first 10 chars):', this.supabaseKey.substring(0, 10));
-        console.log('URL check:', this.supabaseUrl !== 'YOUR_SUPABASE_URL');
-        console.log('Key check:', this.supabaseKey !== 'YOUR_SUPABASE_ANON_KEY');
-        console.log('URL includes placeholder?', this.supabaseUrl.includes('YOUR_SUPABASE_URL'));
-        console.log('Key includes placeholder?', this.supabaseKey.includes('YOUR_SUPABASE_ANON_KEY'));
-        
         if (this.supabaseUrl.startsWith('https://') && this.supabaseKey.startsWith('eyJ')) {
             this.supabase = supabase.createClient(this.supabaseUrl, this.supabaseKey);
-            console.log('Supabase client initialized successfully');
+            console.log('✅ Supabase connected successfully');
         } else {
-            console.log('Supabase not initialized - invalid credentials format');
+            console.log('❌ Supabase not initialized - invalid credentials');
         }
         
         this.data = await this.loadData();
@@ -363,7 +356,7 @@ class PortfolioManager {
 
     editPhoto() {
         // If there's already a photo, show option to edit existing or upload new
-        if (this.data.profilePhoto && this.data.profilePhoto !== "https://via.placeholder.com/200x200") {
+        if (this.data.profilePhoto && !this.data.profilePhoto.includes('data:image/svg+xml')) {
             this.showEditModal('Edit Photo', `
                 <div style="text-align: center; margin-bottom: 20px;">
                     <img src="${this.data.profilePhoto}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid #3498db;">
