@@ -21,8 +21,11 @@ jobs:
     
     - name: Replace environment variables
       run: |
-        sed -i "s|YOUR_SUPABASE_URL|${{ secrets.SUPABASE_URL }}|g" script.js
-        sed -i "s|YOUR_SUPABASE_ANON_KEY|${{ secrets.SUPABASE_ANON_KEY }}|g" script.js
+        echo "Replacing environment variables..."
+        sed -i "s/YOUR_SUPABASE_URL/${{ secrets.SUPABASE_URL }}/g" script.js
+        sed -i "s/YOUR_SUPABASE_ANON_KEY/${{ secrets.SUPABASE_ANON_KEY }}/g" script.js
+        echo "Checking if replacement worked:"
+        grep -n "SUPABASE_URL\|SUPABASE_KEY" script.js | head -5
     
     - name: Setup Pages
       uses: actions/configure-pages@v4
