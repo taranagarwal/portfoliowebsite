@@ -18,17 +18,11 @@ class PortfolioManager {
         
         // Initialize Supabase if credentials are provided
         if (this.supabaseUrl.startsWith('https://') && this.supabaseAnonKey.startsWith('eyJ')) {
-            // Use anon key for reads (public)
             this.supabase = supabase.createClient(this.supabaseUrl, this.supabaseAnonKey);
             
-            // Use service key for writes (admin only)
-            if (this.supabaseServiceKey.startsWith('eyJ')) {
+            if (this.supabaseServiceKey && this.supabaseServiceKey.startsWith('eyJ')) {
                 this.supabaseAdmin = supabase.createClient(this.supabaseUrl, this.supabaseServiceKey);
             }
-            
-            console.log('✅ Supabase connected successfully');
-        } else {
-            console.log('❌ Supabase not initialized - invalid credentials');
         }
         
         this.data = await this.loadData();
@@ -49,42 +43,22 @@ class PortfolioManager {
                     .limit(1);
                 
                 if (data && data.length > 0 && !error) {
-                    console.log('Loaded data from Supabase');
                     return data[0].content;
                 }
             } catch (error) {
-                console.error('Error loading from Supabase:', error);
+                // Supabase error - fall through to localStorage
             }
         }
         
         // Fallback to localStorage
         const saved = localStorage.getItem('portfolioData');
         if (saved) {
-            console.log('Loaded data from localStorage');
             return JSON.parse(saved);
         }
-        
-        // Default data
-        console.log('Using default data');
         return {
-            about: "Welcome to my portfolio! I'm a passionate developer with experience in creating innovative solutions.",
-            experiences: [
-                {
-                    id: 1,
-                    title: "Software Developer",
-                    company: "Tech Company",
-                    date: "2022 - Present",
-                    description: "Developed web applications using modern technologies and frameworks."
-                }
-            ],
-            projects: [
-                {
-                    id: 1,
-                    title: "Portfolio Website",
-                    description: "A responsive portfolio website built with HTML, CSS, and JavaScript.",
-                    technologies: ["HTML", "CSS", "JavaScript"]
-                }
-            ],
+            about: "",
+            experiences: [],
+            projects: [],
             profilePhoto: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f0f0f0'/%3E%3Ccircle cx='100' cy='80' r='30' fill='%23ccc'/%3E%3Cellipse cx='100' cy='160' rx='50' ry='30' fill='%23ccc'/%3E%3C/svg%3E"
         };
     }
@@ -104,13 +78,9 @@ class PortfolioManager {
                         updated_at: new Date().toISOString()
                     });
                 
-                if (!error) {
-                    console.log('Data saved to Supabase');
-                } else {
-                    console.error('Error saving to Supabase:', error);
-                }
+                // Data saved successfully or handle error silently
             } catch (error) {
-                console.error('Error saving to Supabase:', error);
+                // Handle error silently
             }
         }
     }
