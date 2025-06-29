@@ -24,14 +24,13 @@ jobs:
       env:
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
       run: |
         echo "Replacing environment variables..."
-        echo "URL starts with: ${SUPABASE_URL:0:20}..."
-        echo "Key starts with: ${SUPABASE_ANON_KEY:0:20}..."
         sed -i "s|YOUR_SUPABASE_URL|${SUPABASE_URL}|g" script.js
         sed -i "s|YOUR_SUPABASE_ANON_KEY|${SUPABASE_ANON_KEY}|g" script.js
-        echo "Checking if replacement worked:"
-        grep -n "supabaseUrl\|supabaseKey" script.js | head -5
+        sed -i "s|YOUR_SUPABASE_SERVICE_KEY|${SUPABASE_SERVICE_KEY}|g" script.js
+        echo "Environment variables replaced successfully"
     
     - name: Setup Pages
       uses: actions/configure-pages@v4

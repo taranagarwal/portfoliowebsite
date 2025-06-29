@@ -6,7 +6,8 @@ class PortfolioManager {
         
         // Supabase configuration - add your actual values here
         this.supabaseUrl = 'YOUR_SUPABASE_URL'; // Replace with your Supabase project URL
-        this.supabaseKey = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your anon public key
+        this.supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your anon public key
+        this.supabaseServiceKey = 'YOUR_SUPABASE_SERVICE_KEY'; // Replace with your service role key
         this.supabase = null;
         
         this.init();
@@ -16,8 +17,15 @@ class PortfolioManager {
         this.currentFingerprint = await this.generateFingerprint();
         
         // Initialize Supabase if credentials are provided
-        if (this.supabaseUrl.startsWith('https://') && this.supabaseKey.startsWith('eyJ')) {
-            this.supabase = supabase.createClient(this.supabaseUrl, this.supabaseKey);
+        if (this.supabaseUrl.startsWith('https://') && this.supabaseAnonKey.startsWith('eyJ')) {
+            // Use anon key for reads (public)
+            this.supabase = supabase.createClient(this.supabaseUrl, this.supabaseAnonKey);
+            
+            // Use service key for writes (admin only)
+            if (this.supabaseServiceKey.startsWith('eyJ')) {
+                this.supabaseAdmin = supabase.createClient(this.supabaseUrl, this.supabaseServiceKey);
+            }
+            
             console.log('✅ Supabase connected successfully');
         } else {
             console.log('❌ Supabase not initialized - invalid credentials');
@@ -85,10 +93,10 @@ class PortfolioManager {
         // Save to localStorage as backup
         localStorage.setItem('portfolioData', JSON.stringify(this.data));
         
-        // Save to Supabase if available
-        if (this.supabase) {
+        // Save to Supabase if available (admin only)
+        if (this.supabaseAdmin) {
             try {
-                const { error } = await this.supabase
+                const { error } = await this.supabaseAdmin
                     .from('portfolio_data')
                     .insert({
                         data_type: 'main',
