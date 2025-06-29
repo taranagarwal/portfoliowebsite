@@ -517,8 +517,8 @@ class PortfolioManager {
 
     addExperience() {
         this.showEditModal('Add Experience', `
-            <input type="text" id="expTitle" placeholder="Job Title">
-            <input type="text" id="expCompany" placeholder="Company">
+            <input type="text" id="expTitle" placeholder="Company">
+            <input type="text" id="expCompany" placeholder="Job Title">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0;">
                 <div>
                     <label>Start Date:</label>
