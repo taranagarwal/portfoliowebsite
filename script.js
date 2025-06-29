@@ -603,8 +603,8 @@ class PortfolioManager {
 
             const newExp = {
                 id: Date.now(),
-                title,
-                company,
+                title: company, // expCompany is actually the job title
+                company: title, // expTitle is actually the company
                 startMonth: parseInt(startMonth),
                 startYear: parseInt(startYear),
                 endMonth: isCurrent ? null : parseInt(endMonth),
@@ -697,8 +697,8 @@ class PortfolioManager {
             if (expIndex !== -1) {
                 this.data.experiences[expIndex] = {
                     id,
-                    title,
-                    company,
+                    title: company, // expCompany is actually the job title
+                    company: title, // expTitle is actually the company
                     startMonth: parseInt(startMonth),
                     startYear: parseInt(startYear),
                     endMonth: isCurrent ? null : parseInt(endMonth),
