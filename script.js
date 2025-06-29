@@ -2,7 +2,7 @@ class PortfolioManager {
     constructor() {
         this.isLoggedIn = false;
         // Authorized fingerprints - local and production versions
-        this.authorizedFingerprints = ['806587693', 'YOUR_PRODUCTION_FINGERPRINT'];
+        this.authorizedFingerprints = ['-1877139945', 'YOUR_PRODUCTION_FINGERPRINT'];
         
         // Supabase configuration - add your actual values here
         this.supabaseUrl = 'YOUR_SUPABASE_URL'; // Replace with your Supabase project URL
@@ -15,6 +15,7 @@ class PortfolioManager {
 
     async init() {
         this.currentFingerprint = await this.generateFingerprint();
+        console.log('Current fingerprint:', this.currentFingerprint);
         
         // Initialize Supabase if credentials are provided
         if (this.supabaseUrl.startsWith('https://') && this.supabaseAnonKey.startsWith('eyJ')) {
@@ -282,17 +283,18 @@ class PortfolioManager {
 
         sortedExperiences.forEach((exp, index) => {
             const expElement = document.createElement('div');
-            expElement.className = 'experience-item';
-            const truncatedDescription = this.truncateText(exp.description, 150);
-            const needsReadMore = exp.description && exp.description.length > 150;
+            expElement.className = `experience-item ${!exp.description || exp.description.trim() === '' ? 'no-description' : ''}`;
+            const hasDescription = exp.description && exp.description.trim() !== '';
             
             expElement.innerHTML = `
                 <h3>${exp.company}</h3>
                 <h4>${exp.title}</h4>
                 <p class="date">${exp.date}</p>
-                <div class="description-container">
-                    <p>${truncatedDescription}${needsReadMore ? ` <span class="read-more" onclick="portfolio.showReadMoreModal('${exp.company} - ${exp.title}', '${exp.description.replace(/'/g, "\\'")}')">Read more</span>` : ''}</p>
-                </div>
+                ${hasDescription ? `
+                    <div class="description-container">
+                        <button class="view-description-btn" onclick="portfolio.showReadMoreModal('${exp.company} - ${exp.title}', '${exp.description.replace(/'/g, "\\'")}')">View Description</button>
+                    </div>
+                ` : ''}
                 ${this.isLoggedIn ? `
                     <div class="item-buttons">
                         <button class="reorder-btn" onclick="portfolio.moveExperience(${exp.id}, 'up')" ${index === 0 ? 'disabled' : ''}>↑</button>
