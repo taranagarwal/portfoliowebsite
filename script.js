@@ -287,11 +287,11 @@ class PortfolioManager {
             const needsReadMore = exp.description && exp.description.length > 150;
             
             expElement.innerHTML = `
-                <h3>${exp.title}</h3>
-                <h4>${exp.company}</h4>
+                <h3>${exp.company}</h3>
+                <h4>${exp.title}</h4>
                 <p class="date">${exp.date}</p>
                 <div class="description-container">
-                    <p>${truncatedDescription}${needsReadMore ? ` <span class="read-more" onclick="portfolio.showReadMoreModal('${exp.title} at ${exp.company}', '${exp.description.replace(/'/g, "\\'")}')">Read more</span>` : ''}</p>
+                    <p>${truncatedDescription}${needsReadMore ? ` <span class="read-more" onclick="portfolio.showReadMoreModal('${exp.company} - ${exp.title}', '${exp.description.replace(/'/g, "\\'")}')">Read more</span>` : ''}</p>
                 </div>
                 ${this.isLoggedIn ? `
                     <div class="item-buttons">
