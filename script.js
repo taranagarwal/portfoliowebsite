@@ -264,21 +264,23 @@ class PortfolioManager {
         const container = document.getElementById('experiencesList');
         container.innerHTML = '';
 
-        // Sort experiences chronologically (most recent first)
+        // Sort by order property (if exists) or chronologically
         const sortedExperiences = this.data.experiences.sort((a, b) => {
-            // Extract end year from date string (e.g., "2022 - Present" or "2020 - 2022")
+            if (a.order !== undefined && b.order !== undefined) {
+                return a.order - b.order;
+            }
+            // Fallback to chronological sorting
             const getEndYear = (dateStr) => {
                 if (dateStr.toLowerCase().includes('present')) {
-                    return 9999; // Present jobs come first
+                    return 9999;
                 }
                 const matches = dateStr.match(/(\d{4})/g);
                 return matches ? parseInt(matches[matches.length - 1]) : 0;
             };
-            
             return getEndYear(b.date) - getEndYear(a.date);
         });
 
-        sortedExperiences.forEach(exp => {
+        sortedExperiences.forEach((exp, index) => {
             const expElement = document.createElement('div');
             expElement.className = 'experience-item';
             const truncatedDescription = this.truncateText(exp.description, 150);
@@ -293,6 +295,8 @@ class PortfolioManager {
                 </div>
                 ${this.isLoggedIn ? `
                     <div class="item-buttons">
+                        <button class="reorder-btn" onclick="portfolio.moveExperience(${exp.id}, 'up')" ${index === 0 ? 'disabled' : ''}>↑</button>
+                        <button class="reorder-btn" onclick="portfolio.moveExperience(${exp.id}, 'down')" ${index === sortedExperiences.length - 1 ? 'disabled' : ''}>↓</button>
                         <button class="edit-btn" onclick="portfolio.editExperience(${exp.id})">Edit</button>
                         <button class="delete-btn" onclick="portfolio.deleteExperience(${exp.id})">Delete</button>
                     </div>
@@ -306,7 +310,15 @@ class PortfolioManager {
         const container = document.getElementById('projectsList');
         container.innerHTML = '';
 
-        this.data.projects.forEach(project => {
+        // Sort by order property (if exists) or keep original order
+        const sortedProjects = this.data.projects.sort((a, b) => {
+            if (a.order !== undefined && b.order !== undefined) {
+                return a.order - b.order;
+            }
+            return 0; // Keep original order if no order property
+        });
+
+        sortedProjects.forEach((project, index) => {
             const projectElement = document.createElement('div');
             projectElement.className = 'project-item';
             const truncatedDescription = this.truncateText(project.description, 150);
@@ -323,6 +335,8 @@ class PortfolioManager {
                 </div>
                 ${this.isLoggedIn ? `
                     <div class="item-buttons">
+                        <button class="reorder-btn" onclick="portfolio.moveProject(${project.id}, 'up')" ${index === 0 ? 'disabled' : ''}>↑</button>
+                        <button class="reorder-btn" onclick="portfolio.moveProject(${project.id}, 'down')" ${index === sortedProjects.length - 1 ? 'disabled' : ''}>↓</button>
                         <button class="edit-btn" onclick="portfolio.editProject(${project.id})">Edit</button>
                         <button class="delete-btn" onclick="portfolio.deleteProject(${project.id})">Delete</button>
                     </div>
@@ -481,28 +495,120 @@ class PortfolioManager {
         this.closeModals();
     }
 
+    generateMonthOptions(selectedMonth = '') {
+        const months = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        return months.map((month, index) => 
+            `<option value="${index + 1}" ${selectedMonth == index + 1 ? 'selected' : ''}>${month}</option>`
+        ).join('');
+    }
+
+    generateYearOptions(selectedYear = '') {
+        const currentYear = new Date().getFullYear();
+        const startYear = currentYear - 50;
+        const options = [];
+        for (let year = currentYear + 5; year >= startYear; year--) {
+            options.push(`<option value="${year}" ${selectedYear == year ? 'selected' : ''}>${year}</option>`);
+        }
+        return options.join('');
+    }
+
     addExperience() {
         this.showEditModal('Add Experience', `
             <input type="text" id="expTitle" placeholder="Job Title">
             <input type="text" id="expCompany" placeholder="Company">
-            <input type="text" id="expDate" placeholder="Date (e.g., 2022 - Present)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0;">
+                <div>
+                    <label>Start Date:</label>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 5px;">
+                        <select id="expStartMonth">
+                            <option value="">Month</option>
+                            ${this.generateMonthOptions()}
+                        </select>
+                        <select id="expStartYear">
+                            <option value="">Year</option>
+                            ${this.generateYearOptions()}
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label>End Date:</label>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 5px;">
+                        <select id="expEndMonth">
+                            <option value="">Month</option>
+                            ${this.generateMonthOptions()}
+                        </select>
+                        <select id="expEndYear">
+                            <option value="">Year</option>
+                            ${this.generateYearOptions()}
+                        </select>
+                    </div>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="expCurrent" onchange="portfolio.toggleCurrentJob()"> Current Position
+                    </label>
+                </div>
+            </div>
             <textarea id="expDescription" placeholder="Job description..."></textarea>
             <button onclick="portfolio.saveExperience()">Save</button>
         `);
     }
 
+    toggleCurrentJob() {
+        const isCurrent = document.getElementById('expCurrent').checked;
+        const endMonth = document.getElementById('expEndMonth');
+        const endYear = document.getElementById('expEndYear');
+        
+        if (isCurrent) {
+            endMonth.disabled = true;
+            endYear.disabled = true;
+            endMonth.value = '';
+            endYear.value = '';
+        } else {
+            endMonth.disabled = false;
+            endYear.disabled = false;
+        }
+    }
+
     async saveExperience() {
         const title = document.getElementById('expTitle').value;
         const company = document.getElementById('expCompany').value;
-        const date = document.getElementById('expDate').value;
+        const startMonth = document.getElementById('expStartMonth').value;
+        const startYear = document.getElementById('expStartYear').value;
+        const endMonth = document.getElementById('expEndMonth').value;
+        const endYear = document.getElementById('expEndYear').value;
+        const isCurrent = document.getElementById('expCurrent').checked;
         const description = document.getElementById('expDescription').value;
 
-        if (title && company && date && description) {
+        if (title && company && startMonth && startYear && description) {
+            const monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+            
+            const startDate = `${monthNames[startMonth - 1]} ${startYear}`;
+            let endDate;
+            
+            if (isCurrent) {
+                endDate = 'Present';
+            } else if (endMonth && endYear) {
+                endDate = `${monthNames[endMonth - 1]} ${endYear}`;
+            } else {
+                alert('Please fill end date or check "Current Position"!');
+                return;
+            }
+
             const newExp = {
                 id: Date.now(),
                 title,
                 company,
-                date,
+                startMonth: parseInt(startMonth),
+                startYear: parseInt(startYear),
+                endMonth: isCurrent ? null : parseInt(endMonth),
+                endYear: isCurrent ? null : parseInt(endYear),
+                isCurrent,
+                date: `${startDate} - ${endDate}`,
                 description
             };
             this.data.experiences.push(newExp);
@@ -510,7 +616,7 @@ class PortfolioManager {
             this.renderContent();
             this.closeModals();
         } else {
-            alert('Please fill all fields!');
+            alert('Please fill all required fields!');
         }
     }
 
@@ -521,7 +627,37 @@ class PortfolioManager {
         this.showEditModal('Edit Experience', `
             <input type="text" id="expTitle" placeholder="Job Title" value="${exp.title}">
             <input type="text" id="expCompany" placeholder="Company" value="${exp.company}">
-            <input type="text" id="expDate" placeholder="Date (e.g., 2022 - Present)" value="${exp.date}">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0;">
+                <div>
+                    <label>Start Date:</label>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 5px;">
+                        <select id="expStartMonth">
+                            <option value="">Month</option>
+                            ${this.generateMonthOptions(exp.startMonth)}
+                        </select>
+                        <select id="expStartYear">
+                            <option value="">Year</option>
+                            ${this.generateYearOptions(exp.startYear)}
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label>End Date:</label>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 5px;">
+                        <select id="expEndMonth" ${exp.isCurrent ? 'disabled' : ''}>
+                            <option value="">Month</option>
+                            ${this.generateMonthOptions(exp.endMonth)}
+                        </select>
+                        <select id="expEndYear" ${exp.isCurrent ? 'disabled' : ''}>
+                            <option value="">Year</option>
+                            ${this.generateYearOptions(exp.endYear)}
+                        </select>
+                    </div>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="expCurrent" ${exp.isCurrent ? 'checked' : ''} onchange="portfolio.toggleCurrentJob()"> Current Position
+                    </label>
+                </div>
+            </div>
             <textarea id="expDescription" placeholder="Job description...">${exp.description}</textarea>
             <button onclick="portfolio.updateExperience(${id})">Update</button>
         `);
@@ -530,19 +666,52 @@ class PortfolioManager {
     async updateExperience(id) {
         const title = document.getElementById('expTitle').value;
         const company = document.getElementById('expCompany').value;
-        const date = document.getElementById('expDate').value;
+        const startMonth = document.getElementById('expStartMonth').value;
+        const startYear = document.getElementById('expStartYear').value;
+        const endMonth = document.getElementById('expEndMonth').value;
+        const endYear = document.getElementById('expEndYear').value;
+        const isCurrent = document.getElementById('expCurrent').checked;
         const description = document.getElementById('expDescription').value;
 
-        if (title && company && date && description) {
+        if (title && company && startMonth && startYear && description) {
+            const monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+            
+            const startDate = `${monthNames[startMonth - 1]} ${startYear}`;
+            let endDate;
+            
+            if (isCurrent) {
+                endDate = 'Present';
+            } else if (endMonth && endYear) {
+                endDate = `${monthNames[endMonth - 1]} ${endYear}`;
+            } else {
+                alert('Please fill end date or check "Current Position"!');
+                return;
+            }
+
             const expIndex = this.data.experiences.findIndex(e => e.id === id);
             if (expIndex !== -1) {
-                this.data.experiences[expIndex] = { id, title, company, date, description };
+                this.data.experiences[expIndex] = {
+                    id,
+                    title,
+                    company,
+                    startMonth: parseInt(startMonth),
+                    startYear: parseInt(startYear),
+                    endMonth: isCurrent ? null : parseInt(endMonth),
+                    endYear: isCurrent ? null : parseInt(endYear),
+                    isCurrent,
+                    date: `${startDate} - ${endDate}`,
+                    description,
+                    order: this.data.experiences[expIndex].order // Preserve existing order
+                };
                 await this.saveData();
                 this.renderContent();
                 this.closeModals();
             }
         } else {
-            alert('Please fill all fields!');
+            alert('Please fill all required fields!');
         }
     }
 
@@ -559,7 +728,10 @@ class PortfolioManager {
             <input type="text" id="projectTitle" placeholder="Project Title">
             <textarea id="projectDescription" placeholder="Project description..."></textarea>
             <input type="text" id="projectTech" placeholder="Technologies (comma-separated)">
-            <input type="text" id="projectYear" placeholder="Year (e.g., 2024)">
+            <select id="projectYear">
+                <option value="">Select Year</option>
+                ${this.generateYearOptions()}
+            </select>
             <input type="text" id="projectLink" placeholder="Project Link (optional)">
             <button onclick="portfolio.saveProject()">Save</button>
         `);
@@ -598,7 +770,10 @@ class PortfolioManager {
             <input type="text" id="projectTitle" placeholder="Project Title" value="${project.title}">
             <textarea id="projectDescription" placeholder="Project description...">${project.description}</textarea>
             <input type="text" id="projectTech" placeholder="Technologies (comma-separated)" value="${project.technologies.join(', ')}">
-            <input type="text" id="projectYear" placeholder="Year (e.g., 2024)" value="${project.year || ''}">
+            <select id="projectYear">
+                <option value="">Select Year</option>
+                ${this.generateYearOptions(project.year)}
+            </select>
             <input type="text" id="projectLink" placeholder="Project Link (optional)" value="${project.link || ''}">
             <button onclick="portfolio.updateProject(${id})">Update</button>
         `);
@@ -637,6 +812,50 @@ class PortfolioManager {
             await this.saveData();
             this.renderContent();
         }
+    }
+
+    async moveExperience(id, direction) {
+        // Ensure all experiences have order properties
+        this.data.experiences.forEach((exp, index) => {
+            if (exp.order === undefined) exp.order = index;
+        });
+
+        const expIndex = this.data.experiences.findIndex(exp => exp.id === id);
+        if (expIndex === -1) return;
+
+        const exp = this.data.experiences[expIndex];
+        if (direction === 'up' && expIndex > 0) {
+            const prevExp = this.data.experiences[expIndex - 1];
+            [exp.order, prevExp.order] = [prevExp.order, exp.order];
+        } else if (direction === 'down' && expIndex < this.data.experiences.length - 1) {
+            const nextExp = this.data.experiences[expIndex + 1];
+            [exp.order, nextExp.order] = [nextExp.order, exp.order];
+        }
+
+        await this.saveData();
+        this.renderContent();
+    }
+
+    async moveProject(id, direction) {
+        // Ensure all projects have order properties
+        this.data.projects.forEach((project, index) => {
+            if (project.order === undefined) project.order = index;
+        });
+
+        const projectIndex = this.data.projects.findIndex(project => project.id === id);
+        if (projectIndex === -1) return;
+
+        const project = this.data.projects[projectIndex];
+        if (direction === 'up' && projectIndex > 0) {
+            const prevProject = this.data.projects[projectIndex - 1];
+            [project.order, prevProject.order] = [prevProject.order, project.order];
+        } else if (direction === 'down' && projectIndex < this.data.projects.length - 1) {
+            const nextProject = this.data.projects[projectIndex + 1];
+            [project.order, nextProject.order] = [nextProject.order, project.order];
+        }
+
+        await this.saveData();
+        this.renderContent();
     }
 
     showEditModal(title, content) {
