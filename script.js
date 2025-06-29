@@ -2,7 +2,7 @@ class PortfolioManager {
     constructor() {
         this.isLoggedIn = false;
         // Authorized fingerprints - local and production versions
-        this.authorizedFingerprints = ['-1877139945', 'YOUR_PRODUCTION_FINGERPRINT'];
+        this.authorizedFingerprints = ['806587693', 'YOUR_PRODUCTION_FINGERPRINT'];
         
         // Supabase configuration - add your actual values here
         this.supabaseUrl = 'YOUR_SUPABASE_URL'; // Replace with your Supabase project URL
