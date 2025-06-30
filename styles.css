@@ -335,23 +335,6 @@ main {
     color: #2980b9;
 }
 
-.view-description-btn {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    margin-top: 10px;
-    align-self: flex-start;
-    transition: background-color 0.3s ease;
-}
-
-.view-description-btn:hover {
-    background-color: #2980b9;
-}
-
 /* Project Links */
 .project-links {
     margin: 10px 0;

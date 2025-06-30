@@ -438,6 +438,10 @@ class PortfolioManager {
             expElement.className = `experience-item ${!exp.description || exp.description.trim() === '' ? 'no-description' : ''}`;
             const hasDescription = exp.description && exp.description.trim() !== '';
             
+            // Create truncated description for 1-line preview (shorter than projects since it's meant to be 1 line)
+            const truncatedDescription = hasDescription ? this.formatMarkdown(this.truncateText(exp.description, 120), false) : '';
+            const needsReadMore = hasDescription && exp.description.length > 120;
+            
             expElement.innerHTML = `
                 <div class="experience-header">
                     ${exp.logo ? `<img src="${exp.logo}" alt="${exp.company} logo" class="company-logo">` : ''}
@@ -447,7 +451,7 @@ class PortfolioManager {
                 <p class="date">${exp.date}</p>
                 ${hasDescription ? `
                     <div class="description-container">
-                        <button class="view-description-btn" data-description="${exp.description.replace(/"/g, '&quot;').replace(/\n/g, '\\n')}" onclick="portfolio.showDescriptionFromButton(this, '${exp.company} - ${exp.title}')">View Description</button>
+                        <p>${truncatedDescription}${needsReadMore ? ` <span class="read-more" data-description="${exp.description.replace(/"/g, '&quot;').replace(/\n/g, '\\n')}" onclick="portfolio.showDescriptionFromButton(this, '${exp.company} - ${exp.title}')">Read more</span>` : ''}</p>
                     </div>
                 ` : ''}
                 ${this.isLoggedIn ? `
