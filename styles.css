@@ -499,6 +499,121 @@ code {
     border: 1px solid #e1e4e8;
 }
 
+/* Markdown Styling */
+.editable-content h1, .description-container h1, .modal-content h1 {
+    font-size: 1.8em;
+    color: #2c3e50;
+    margin: 20px 0 15px 0;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 5px;
+}
+
+.editable-content h2, .description-container h2, .modal-content h2 {
+    font-size: 1.5em;
+    color: #2c3e50;
+    margin: 18px 0 12px 0;
+    border-bottom: 1px solid #bdc3c7;
+    padding-bottom: 3px;
+}
+
+.editable-content h3, .description-container h3, .modal-content h3 {
+    font-size: 1.3em;
+    color: #34495e;
+    margin: 16px 0 10px 0;
+}
+
+.editable-content h4, .description-container h4, .modal-content h4 {
+    font-size: 1.1em;
+    color: #34495e;
+    margin: 14px 0 8px 0;
+}
+
+.editable-content h5, .description-container h5, .modal-content h5 {
+    font-size: 1em;
+    color: #34495e;
+    margin: 12px 0 6px 0;
+    font-weight: bold;
+}
+
+.editable-content h6, .description-container h6, .modal-content h6 {
+    font-size: 0.9em;
+    color: #7f8c8d;
+    margin: 10px 0 5px 0;
+    font-weight: bold;
+}
+
+.editable-content blockquote, .description-container blockquote, .modal-content blockquote {
+    border-left: 4px solid #3498db;
+    background-color: #f8f9fa;
+    margin: 15px 0;
+    padding: 10px 15px;
+    font-style: italic;
+    color: #555;
+}
+
+.editable-content hr, .description-container hr, .modal-content hr {
+    border: none;
+    height: 2px;
+    background-color: #bdc3c7;
+    margin: 20px 0;
+}
+
+.editable-content ul, .description-container ul, .modal-content ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.editable-content ol, .description-container ol, .modal-content ol {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.editable-content li, .description-container li, .modal-content li {
+    margin: 5px 0;
+    line-height: 1.5;
+}
+
+.editable-content pre, .description-container pre, .modal-content pre {
+    background-color: #f6f8fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    padding: 16px;
+    margin: 15px 0;
+    overflow-x: auto;
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.editable-content pre code, .description-container pre code, .modal-content pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+}
+
+.editable-content del, .description-container del, .modal-content del {
+    color: #6c757d;
+    text-decoration: line-through;
+}
+
+.editable-content a, .description-container a, .modal-content a {
+    color: #3498db;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.editable-content a:hover, .description-container a:hover, .modal-content a:hover {
+    color: #2980b9;
+    border-bottom-color: #2980b9;
+}
+
+.editable-content p, .description-container p, .modal-content p {
+    margin: 10px 0;
+    line-height: 1.6;
+}
+
 /* Modal Styles */
 .modal {
     display: none;

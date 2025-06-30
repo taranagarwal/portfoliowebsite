@@ -178,10 +178,71 @@ class PortfolioManager {
             newEnd = result.newEnd;
         } else if (e.key === 'k' || e.key === 'K') {
             e.preventDefault();
-            const result = this.toggleFormatting(textarea.value, start, end, '`', '`');
+            // Check if Shift is held for links, otherwise code
+            if (e.shiftKey) {
+                // Create a link [text](url)
+                const selectedText = textarea.value.substring(start, end);
+                if (selectedText) {
+                    replacement = `[${selectedText}](url)`;
+                    newStart = start;
+                    newEnd = start + replacement.length;
+                } else {
+                    replacement = '[text](url)';
+                    newStart = start;
+                    newEnd = start + replacement.length;
+                }
+            } else {
+                const result = this.toggleFormatting(textarea.value, start, end, '`', '`');
+                replacement = result.replacement;
+                newStart = result.newStart;
+                newEnd = result.newEnd;
+            }
+        } else if (e.key === 's' || e.key === 'S') {
+            e.preventDefault();
+            const result = this.toggleFormatting(textarea.value, start, end, '~~', '~~');
             replacement = result.replacement;
             newStart = result.newStart;
             newEnd = result.newEnd;
+        } else if ((e.key === '1' || e.key === '2' || e.key === '3' || e.key === '4' || e.key === '5' || e.key === '6') && e.shiftKey) {
+            e.preventDefault();
+            // Add header
+            const level = parseInt(e.key);
+            const headerPrefix = '#'.repeat(level) + ' ';
+            const selectedText = textarea.value.substring(start, end);
+            
+            // Check if we're at the beginning of a line or add newline
+            const beforeText = textarea.value.substring(0, start);
+            const needsNewline = beforeText.length > 0 && !beforeText.endsWith('\n');
+            
+            replacement = (needsNewline ? '\n' : '') + headerPrefix + (selectedText || 'Header text');
+            newStart = start;
+            newEnd = start + replacement.length;
+        } else if (e.key === 'q' || e.key === 'Q') {
+            e.preventDefault();
+            // Add blockquote
+            const selectedText = textarea.value.substring(start, end);
+            const beforeText = textarea.value.substring(0, start);
+            const needsNewline = beforeText.length > 0 && !beforeText.endsWith('\n');
+            
+            replacement = (needsNewline ? '\n' : '') + '> ' + (selectedText || 'Quote text');
+            newStart = start;
+            newEnd = start + replacement.length;
+        } else if (e.key === 'l' || e.key === 'L') {
+            e.preventDefault();
+            // Add list item
+            const selectedText = textarea.value.substring(start, end);
+            const beforeText = textarea.value.substring(0, start);
+            const needsNewline = beforeText.length > 0 && !beforeText.endsWith('\n');
+            
+            if (e.shiftKey) {
+                // Ordered list
+                replacement = (needsNewline ? '\n' : '') + '1. ' + (selectedText || 'List item');
+            } else {
+                // Unordered list
+                replacement = (needsNewline ? '\n' : '') + '- ' + (selectedText || 'List item');
+            }
+            newStart = start;
+            newEnd = start + replacement.length;
         }
         
         if (replacement !== '') {
@@ -191,9 +252,9 @@ class PortfolioManager {
             textarea.value = beforeSelection + replacement + afterSelection;
             
             // Set cursor position
-            if (replacement.includes('**') || replacement.includes('*') || replacement.includes('`')) {
-                // Check if this is empty formatting (like ****, **, or ``)
-                if ((replacement === '****') || (replacement === '**') || (replacement === '``')) {
+            if (replacement.includes('**') || replacement.includes('*') || replacement.includes('`') || replacement.includes('~~')) {
+                // Check if this is empty formatting (like ****, **, ``, or ~~~~)
+                if ((replacement === '****') || (replacement === '**') || (replacement === '``') || (replacement === '~~~~')) {
                     // Place cursor in the middle of empty formatting
                     const middlePos = beforeSelection.length + Math.floor(replacement.length / 2);
                     textarea.setSelectionRange(middlePos, middlePos);
@@ -203,10 +264,9 @@ class PortfolioManager {
                     textarea.setSelectionRange(newCursorPos, newCursorPos);
                 }
             } else {
-                // If we removed formatting, select the unformatted text
-                const newCursorStart = beforeSelection.length;
-                const newCursorEnd = beforeSelection.length + replacement.length;
-                textarea.setSelectionRange(newCursorStart, newCursorEnd);
+                // For other elements, place cursor at the end
+                const newCursorPos = beforeSelection.length + replacement.length;
+                textarea.setSelectionRange(newCursorPos, newCursorPos);
             }
         }
     }
@@ -343,14 +403,9 @@ class PortfolioManager {
         return url;
     }
 
-    truncateText(text, maxLength = 150) {
+    truncateText(text, maxLength = 315) {
         if (!text || text.length <= maxLength) return text;
         return text.substring(0, maxLength) + '...';
-    }
-
-    showDescriptionFromButton(button, title) {
-        const description = button.getAttribute('data-description').replace(/\\n/g, '\n').replace(/&quot;/g, '"');
-        this.showReadMoreModal(title, description);
     }
 
     showReadMoreModal(title, fullDescription) {
@@ -363,26 +418,153 @@ class PortfolioManager {
     }
 
     formatMarkdown(text, includeLineBreaks = true) {
-        // Use placeholders to avoid conflicts between different markdown formats
-        let formatted = text
-            // First, replace code with a placeholder
+        if (!text) return '';
+        
+        // First, handle code blocks (triple backticks) before other processing
+        let formatted = text.replace(/```([^`]+?)```/gs, '{{CODEBLOCK_START}}$1{{CODEBLOCK_END}}');
+        
+        // Split into lines for line-by-line processing
+        let lines = formatted.split('\n');
+        let processedLines = [];
+        let inList = false;
+        let listType = null;
+        
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+            let originalLine = line;
+            
+            // Skip empty lines (but preserve them)
+            if (line.trim() === '') {
+                if (inList) {
+                    processedLines.push('</ul>');
+                    inList = false;
+                    listType = null;
+                }
+                processedLines.push('');
+                continue;
+            }
+            
+            // Headers (# ## ### #### ######)
+            const headerMatch = line.match(/^(#{1,6})\s+(.+)$/);
+            if (headerMatch) {
+                if (inList) {
+                    processedLines.push('</ul>');
+                    inList = false;
+                    listType = null;
+                }
+                const level = headerMatch[1].length;
+                const headerText = headerMatch[2];
+                line = `<h${level}>${headerText}</h${level}>`;
+            }
+            
+            // Blockquotes (> text)
+            else if (line.match(/^>\s+/)) {
+                if (inList) {
+                    processedLines.push('</ul>');
+                    inList = false;
+                    listType = null;
+                }
+                line = line.replace(/^>\s+(.+)$/, '<blockquote>$1</blockquote>');
+            }
+            
+            // Horizontal rules (--- or ***)
+            else if (line.match(/^(---|\*\*\*)$/)) {
+                if (inList) {
+                    processedLines.push('</ul>');
+                    inList = false;
+                    listType = null;
+                }
+                line = '<hr>';
+            }
+            
+            // Unordered lists (- item or * item)
+            else if (line.match(/^[\s]*[-\*]\s+/)) {
+                if (!inList) {
+                    processedLines.push('<ul>');
+                    inList = true;
+                    listType = 'ul';
+                }
+                line = line.replace(/^[\s]*[-\*]\s+(.+)$/, '<li>$1</li>');
+            }
+            
+            // Ordered lists (1. item)
+            else if (line.match(/^[\s]*\d+\.\s+/)) {
+                if (!inList || listType !== 'ol') {
+                    if (inList && listType === 'ul') {
+                        processedLines.push('</ul>');
+                    }
+                    processedLines.push('<ol>');
+                    inList = true;
+                    listType = 'ol';
+                }
+                line = line.replace(/^[\s]*\d+\.\s+(.+)$/, '<li>$1</li>');
+            }
+            
+            // If not a list item and we were in a list, close it
+            else if (inList) {
+                processedLines.push(listType === 'ul' ? '</ul>' : '</ol>');
+                inList = false;
+                listType = null;
+            }
+            
+            processedLines.push(line);
+        }
+        
+        // Close any remaining open lists
+        if (inList) {
+            processedLines.push(listType === 'ul' ? '</ul>' : '</ol>');
+        }
+        
+        // Join lines back together
+        formatted = processedLines.join('\n');
+        
+        // Now handle inline formatting with placeholders to avoid conflicts
+        formatted = formatted
+            // Links [text](url)
+            .replace(/\[([^\]]+?)\]\(([^)]+?)\)/g, '{{LINK_START}}$1{{LINK_MID}}$2{{LINK_END}}')
+            // Code (single backticks)
             .replace(/`([^`]+?)`/g, '{{CODE_START}}$1{{CODE_END}}')
-            // Then replace bold with a placeholder
+            // Strikethrough (~~text~~)
+            .replace(/~~([^~]+?)~~/g, '{{STRIKE_START}}$1{{STRIKE_END}}')
+            // Bold (**text**)
             .replace(/\*\*([^*]+?)\*\*/g, '{{BOLD_START}}$1{{BOLD_END}}')
-            // Then replace remaining single asterisks with italic
-            .replace(/\*([^*]+?)\*/g, '<em>$1</em>')
-            // Replace placeholders with actual HTML tags
+            // Italic (*text*)
+            .replace(/\*([^*]+?)\*/g, '{{ITALIC_START}}$1{{ITALIC_END}}')
+            // Replace placeholders with HTML
+            .replace(/\{\{LINK_START\}\}/g, '<a href="')
+            .replace(/\{\{LINK_MID\}\}/g, '" target="_blank" rel="noopener noreferrer">')
+            .replace(/\{\{LINK_END\}\}/g, '</a>')
+            .replace(/\{\{CODEBLOCK_START\}\}/g, '<pre><code>')
+            .replace(/\{\{CODEBLOCK_END\}\}/g, '</code></pre>')
             .replace(/\{\{CODE_START\}\}/g, '<code>')
             .replace(/\{\{CODE_END\}\}/g, '</code>')
+            .replace(/\{\{STRIKE_START\}\}/g, '<del>')
+            .replace(/\{\{STRIKE_END\}\}/g, '</del>')
             .replace(/\{\{BOLD_START\}\}/g, '<strong>')
-            .replace(/\{\{BOLD_END\}\}/g, '</strong>');
+            .replace(/\{\{BOLD_END\}\}/g, '</strong>')
+            .replace(/\{\{ITALIC_START\}\}/g, '<em>')
+            .replace(/\{\{ITALIC_END\}\}/g, '</em>');
         
-        // Only add line breaks if requested (for full modal view)
+        // Handle line breaks
         if (includeLineBreaks) {
-            formatted = formatted.replace(/\n/g, '<br>');
+            // Convert double newlines to paragraph breaks
+            formatted = formatted
+                .replace(/\n\s*\n/g, '</p><p>')
+                .replace(/^/, '<p>')
+                .replace(/$/, '</p>')
+                // Clean up empty paragraphs
+                .replace(/<p><\/p>/g, '')
+                .replace(/<p>\s*<\/p>/g, '');
+                
+            // Convert single newlines to <br> within paragraphs (except around block elements)
+            formatted = formatted.replace(/(?<!<\/(?:h[1-6]|blockquote|hr|ul|ol|li|pre)>)\n(?!<(?:h[1-6]|blockquote|hr|ul|ol|li|pre|\/p))/g, '<br>');
         } else {
-            // For preview, replace newlines with spaces
-            formatted = formatted.replace(/\n/g, ' ');
+            // For preview, replace newlines with spaces and strip block elements
+            formatted = formatted
+                .replace(/<\/?(?:h[1-6]|blockquote|hr|ul|ol|li|pre|p)[^>]*>/g, ' ')
+                .replace(/\n/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
         }
         
         return formatted;
@@ -421,8 +603,9 @@ class PortfolioManager {
         // Render header
         this.renderHeader();
         
-        // Render about section
-        document.getElementById('aboutText').innerHTML = `<p>${this.data.about}</p>`;
+        // Render about section with markdown formatting
+        const formattedAbout = this.formatMarkdown(this.data.about);
+        document.getElementById('aboutText').innerHTML = formattedAbout;
         document.getElementById('profilePhoto').src = this.data.profilePhoto;
 
         // Render experiences
@@ -496,7 +679,7 @@ class PortfolioManager {
                 <p class="date">${exp.date}</p>
                 ${hasDescription ? `
                     <div class="description-container">
-                        <p>${truncatedDescription}${needsReadMore ? ` <span class="read-more" data-description="${exp.description.replace(/"/g, '&quot;').replace(/\n/g, '\\n')}" onclick="portfolio.showDescriptionFromButton(this, '${exp.company} - ${exp.title}')">Read more</span>` : ''}</p>
+                        <p>${truncatedDescription}${needsReadMore ? ` <span class="read-more" data-exp-id="${exp.id}" data-type="experience">Read more</span>` : ''}</p>
                     </div>
                 ` : ''}
                 ${this.isLoggedIn ? `
@@ -509,6 +692,17 @@ class PortfolioManager {
                 ` : ''}
             `;
             container.appendChild(expElement);
+        });
+
+        // Add event listeners for Read more buttons
+        container.querySelectorAll('.read-more[data-type="experience"]').forEach(button => {
+            button.addEventListener('click', () => {
+                const expId = parseInt(button.getAttribute('data-exp-id'));
+                const exp = this.data.experiences.find(e => e.id === expId);
+                if (exp) {
+                    this.showReadMoreModal(`${exp.company} - ${exp.title}`, exp.description);
+                }
+            });
         });
     }
 
@@ -527,13 +721,13 @@ class PortfolioManager {
         sortedProjects.forEach((project, index) => {
             const projectElement = document.createElement('div');
             projectElement.className = 'project-item';
-            const truncatedDescription = this.formatMarkdown(this.truncateText(project.description, 150), false);
-            const needsReadMore = project.description && project.description.length > 150;
+            const truncatedDescription = this.formatMarkdown(this.truncateText(project.description, 315), false);
+            const needsReadMore = project.description && project.description.length > 315;
             
             projectElement.innerHTML = `
                 <h3>${project.title} ${project.year ? `(${project.year})` : ''}</h3>
                 <div class="description-container">
-                    <p>${truncatedDescription}${needsReadMore ? ` <span class="read-more" data-description="${project.description.replace(/"/g, '&quot;').replace(/\n/g, '\\n')}" onclick="portfolio.showDescriptionFromButton(this, '${project.title}')">Read more</span>` : ''}</p>
+                    <p>${truncatedDescription}${needsReadMore ? ` <span class="read-more" data-project-id="${project.id}" data-type="project">Read more</span>` : ''}</p>
                 </div>
                 ${this.renderProjectLinks(project)}
                 <div class="project-tech">
@@ -550,11 +744,29 @@ class PortfolioManager {
             `;
             container.appendChild(projectElement);
         });
+
+        // Add event listeners for Read more buttons
+        container.querySelectorAll('.read-more[data-type="project"]').forEach(button => {
+            button.addEventListener('click', () => {
+                const projectId = parseInt(button.getAttribute('data-project-id'));
+                const project = this.data.projects.find(p => p.id === projectId);
+                if (project) {
+                    this.showReadMoreModal(project.title, project.description);
+                }
+            });
+        });
     }
 
     editAbout() {
         this.showEditModal('Edit About Section', `
             <textarea id="aboutTextarea" placeholder="About text...">${this.data.about}</textarea>
+            <div class="markdown-help" style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 12px;">
+                <strong>Markdown Support:</strong>
+                <strong>Bold</strong> **text**, <em>Italic</em> *text*, <code>code</code> \`text\`, <del>Strike</del> ~~text~~<br>
+                Headers: # H1, ## H2, ### H3<br>
+                Lists: - item or 1. item, > Blockquote, [link](url)<br>
+                <strong>Shortcuts:</strong> Cmd/Ctrl+B (bold), I (italic), K (code), Shift+K (link), S (strike), Q (quote), L (list)
+            </div>
             <button onclick="portfolio.saveAbout()">Save</button>
         `);
     }
@@ -840,6 +1052,11 @@ class PortfolioManager {
                 </div>
             </div>
             <textarea id="expDescription" placeholder="Job description (optional)..."></textarea>
+            <div class="markdown-help" style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 12px;">
+                <strong>Markdown Support:</strong>
+                <strong>Bold</strong> **text**, <em>Italic</em> *text*, <code>code</code> \`text\`, <del>Strike</del> ~~text~~<br>
+                Headers: # H1, ## H2, ### H3 | Lists: - item or 1. item | > Blockquote | [link](url)
+            </div>
             <button onclick="portfolio.saveExperience()">Save</button>
         `);
         
@@ -966,6 +1183,11 @@ class PortfolioManager {
                 </div>
             </div>
             <textarea id="expDescription" placeholder="Job description (optional)...">${exp.description}</textarea>
+            <div class="markdown-help" style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 12px;">
+                <strong>Markdown Support:</strong>
+                <strong>Bold</strong> **text**, <em>Italic</em> *text*, <code>code</code> \`text\`, <del>Strike</del> ~~text~~<br>
+                Headers: # H1, ## H2, ### H3 | Lists: - item or 1. item | > Blockquote | [link](url)
+            </div>
             <button onclick="portfolio.updateExperience(${id})">Update</button>
         `);
         
@@ -1043,6 +1265,11 @@ class PortfolioManager {
         this.showEditModal('Add Project', `
             <input type="text" id="projectTitle" placeholder="Project Title">
             <textarea id="projectDescription" placeholder="Project description (optional)..."></textarea>
+            <div class="markdown-help" style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 12px;">
+                <strong>Markdown Support:</strong>
+                <strong>Bold</strong> **text**, <em>Italic</em> *text*, <code>code</code> \`text\`, <del>Strike</del> ~~text~~<br>
+                Headers: # H1, ## H2, ### H3 | Lists: - item or 1. item | > Blockquote | [link](url)
+            </div>
             <input type="text" id="projectTech" placeholder="Technologies (comma-separated)">
             <select id="projectYear">
                 <option value="">Select Year</option>
@@ -1163,6 +1390,11 @@ class PortfolioManager {
         this.showEditModal('Edit Project', `
             <input type="text" id="projectTitle" placeholder="Project Title" value="${project.title}">
             <textarea id="projectDescription" placeholder="Project description (optional)...">${project.description}</textarea>
+            <div class="markdown-help" style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 12px;">
+                <strong>Markdown Support:</strong>
+                <strong>Bold</strong> **text**, <em>Italic</em> *text*, <code>code</code> \`text\`, <del>Strike</del> ~~text~~<br>
+                Headers: # H1, ## H2, ### H3 | Lists: - item or 1. item | > Blockquote | [link](url)
+            </div>
             <input type="text" id="projectTech" placeholder="Technologies (comma-separated)" value="${project.technologies.join(', ')}">
             <select id="projectYear">
                 <option value="">Select Year</option>
