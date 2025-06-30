@@ -64,7 +64,14 @@ class PortfolioManager {
             about: "",
             experiences: [],
             projects: [],
-            profilePhoto: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f0f0f0'/%3E%3Ccircle cx='100' cy='80' r='30' fill='%23ccc'/%3E%3Cellipse cx='100' cy='160' rx='50' ry='30' fill='%23ccc'/%3E%3C/svg%3E"
+            profilePhoto: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f0f0f0'/%3E%3Ccircle cx='100' cy='80' r='30' fill='%23ccc'/%3E%3Cellipse cx='100' cy='160' rx='50' ry='30' fill='%23ccc'/%3E%3C/svg%3E",
+            header: {
+                name: "Taran Agarwal",
+                socialLinks: {
+                    github: "https://github.com/taranagarwal",
+                    linkedin: "https://www.linkedin.com/in/agarwaltaran/"
+                }
+            }
         };
     }
 
@@ -97,6 +104,8 @@ class PortfolioManager {
         // Edit events
         document.getElementById('editAboutBtn').addEventListener('click', () => this.editAbout());
         document.getElementById('editPhotoBtn').addEventListener('click', () => this.editPhoto());
+        document.getElementById('editHeaderBtn').addEventListener('click', () => this.editHeader());
+        document.getElementById('editSocialBtn').addEventListener('click', () => this.editSocialLinks());
         document.getElementById('addExperienceBtn').addEventListener('click', () => this.addExperience());
         document.getElementById('addProjectBtn').addEventListener('click', () => this.addProject());
 
@@ -402,6 +411,9 @@ class PortfolioManager {
     }
 
     renderContent() {
+        // Render header
+        this.renderHeader();
+        
         // Render about section
         document.getElementById('aboutText').innerHTML = `<p>${this.data.about}</p>`;
         document.getElementById('profilePhoto').src = this.data.profilePhoto;
@@ -411,6 +423,24 @@ class PortfolioManager {
 
         // Render projects
         this.renderProjects();
+    }
+    
+    renderHeader() {
+        // Update header name
+        if (this.data.header && this.data.header.name) {
+            document.getElementById('headerName').textContent = this.data.header.name;
+            document.title = this.data.header.name; // Update page title too
+        }
+        
+        // Update social links
+        if (this.data.header && this.data.header.socialLinks) {
+            if (this.data.header.socialLinks.github) {
+                document.getElementById('githubLink').href = this.data.header.socialLinks.github;
+            }
+            if (this.data.header.socialLinks.linkedin) {
+                document.getElementById('linkedinLink').href = this.data.header.socialLinks.linkedin;
+            }
+        }
     }
 
     renderExperiences() {
@@ -591,11 +621,15 @@ class PortfolioManager {
         // Update zoom display
         document.getElementById('zoomValue').textContent = Math.round(zoom * 100) + '%';
         
+        // Enable high-quality rendering
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
+        
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
         // Calculate image dimensions to fit in canvas while maintaining aspect ratio
-        const canvasSize = 400;
+        const canvasSize = 600; // Updated from 400 to 600 for higher quality
         const imgWidth = this.originalImage.width;
         const imgHeight = this.originalImage.height;
         
@@ -628,29 +662,37 @@ class PortfolioManager {
     async saveEditedImage() {
         if (!this.canvas) return;
         
-        // Create a new canvas for the circular crop
+        // Create a high-resolution canvas for the circular crop
         const cropCanvas = document.createElement('canvas');
         const cropCtx = cropCanvas.getContext('2d');
-        const size = 200;
+        const size = 600; // Increased from 200 to 600 for much higher quality
         
         cropCanvas.width = size;
         cropCanvas.height = size;
+        
+        // Enable high-quality rendering
+        cropCtx.imageSmoothingEnabled = true;
+        cropCtx.imageSmoothingQuality = 'high';
         
         // Create circular clipping path
         cropCtx.beginPath();
         cropCtx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
         cropCtx.clip();
         
-        // Get the image data from the center of the main canvas (where the crop circle is)
-        const sourceX = this.canvas.width/2 - size/2;
-        const sourceY = this.canvas.height/2 - size/2;
+        // Calculate the area to crop from the main canvas (where the crop circle is)
+        const sourceSize = 300; // Updated from 200 to 300 to match the larger canvas (crop circle size)
+        const sourceX = this.canvas.width/2 - sourceSize/2;
+        const sourceY = this.canvas.height/2 - sourceSize/2;
         
-        // Draw the cropped portion
-        const imageData = this.ctx.getImageData(sourceX, sourceY, size, size);
-        cropCtx.putImageData(imageData, 0, 0);
+        // Draw the high-quality cropped portion using drawImage (much better than getImageData)
+        cropCtx.drawImage(
+            this.canvas, 
+            sourceX, sourceY, sourceSize, sourceSize,  // source rectangle 
+            0, 0, size, size                           // destination rectangle (upscaled)
+        );
         
-        // Save the result
-        this.data.profilePhoto = cropCanvas.toDataURL('image/jpeg', 0.9);
+        // Save as PNG for lossless quality (no compression artifacts)
+        this.data.profilePhoto = cropCanvas.toDataURL('image/png');
         await this.saveData();
         this.renderContent();
         this.closeModals();
@@ -1178,6 +1220,63 @@ class PortfolioManager {
         document.querySelectorAll('.modal').forEach(modal => {
             modal.style.display = 'none';
         });
+    }
+
+    editHeader() {
+        const currentName = this.data.header?.name || 'Taran Agarwal';
+        this.showEditModal('Edit Header', `
+            <input type="text" id="headerNameInput" placeholder="Your Name" value="${currentName}">
+            <button onclick="portfolio.saveHeader()">Save</button>
+        `);
+    }
+    
+    async saveHeader() {
+        const newName = document.getElementById('headerNameInput').value;
+        if (newName.trim()) {
+            if (!this.data.header) {
+                this.data.header = { socialLinks: {} };
+            }
+            this.data.header.name = newName.trim();
+            await this.saveData();
+            this.renderContent();
+            this.closeModals();
+        } else {
+            alert('Please enter a name!');
+        }
+    }
+    
+    editSocialLinks() {
+        const currentGithub = this.data.header?.socialLinks?.github || '';
+        const currentLinkedin = this.data.header?.socialLinks?.linkedin || '';
+        
+        this.showEditModal('Edit Social Links', `
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">GitHub URL:</label>
+            <input type="url" id="githubUrlInput" placeholder="https://github.com/yourusername" value="${currentGithub}">
+            
+            <label style="display: block; margin-bottom: 5px; margin-top: 15px; font-weight: bold;">LinkedIn URL:</label>
+            <input type="url" id="linkedinUrlInput" placeholder="https://www.linkedin.com/in/yourprofile" value="${currentLinkedin}">
+            
+            <button onclick="portfolio.saveSocialLinks()">Save</button>
+        `);
+    }
+    
+    async saveSocialLinks() {
+        const newGithub = document.getElementById('githubUrlInput').value.trim();
+        const newLinkedin = document.getElementById('linkedinUrlInput').value.trim();
+        
+        if (!this.data.header) {
+            this.data.header = { name: 'Taran Agarwal', socialLinks: {} };
+        }
+        if (!this.data.header.socialLinks) {
+            this.data.header.socialLinks = {};
+        }
+        
+        this.data.header.socialLinks.github = newGithub;
+        this.data.header.socialLinks.linkedin = newLinkedin;
+        
+        await this.saveData();
+        this.renderContent();
+        this.closeModals();
     }
 
 }
