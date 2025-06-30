@@ -198,9 +198,26 @@ main {
     padding: 15px 20px;
 }
 
+.experience-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 5px;
+}
+
+.company-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    object-fit: cover;
+    border: 1px solid #ddd;
+    flex-shrink: 0;
+}
+
 .experience-item h3 {
     color: #2c3e50;
     margin-bottom: 5px;
+    margin: 0;
 }
 
 .experience-item h4 {

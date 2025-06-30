@@ -15,7 +15,6 @@ class PortfolioManager {
 
     async init() {
         this.currentFingerprint = await this.generateFingerprint();
-        console.log('Current fingerprint:', this.currentFingerprint);
         
         // Initialize Supabase if credentials are provided
         if (this.supabaseUrl.startsWith('https://') && this.supabaseAnonKey.startsWith('eyJ')) {
@@ -103,6 +102,9 @@ class PortfolioManager {
 
         // Photo upload
         document.getElementById('photoInput').addEventListener('change', (e) => this.handlePhotoUpload(e));
+        
+        // Logo upload
+        document.getElementById('logoInput').addEventListener('change', (e) => this.handleExpLogoUpload(e));
 
         // Image editor events
         document.getElementById('zoomSlider').addEventListener('input', () => this.updateCanvas());
@@ -294,7 +296,6 @@ class PortfolioManager {
             
             return hash.toString();
         } catch (error) {
-            console.error('Fingerprint error:', error);
             return 'stable-fallback';
         }
     }
@@ -438,7 +439,10 @@ class PortfolioManager {
             const hasDescription = exp.description && exp.description.trim() !== '';
             
             expElement.innerHTML = `
-                <h3>${exp.company}</h3>
+                <div class="experience-header">
+                    ${exp.logo ? `<img src="${exp.logo}" alt="${exp.company} logo" class="company-logo">` : ''}
+                    <h3>${exp.company}</h3>
+                </div>
                 <h4>${exp.title}</h4>
                 <p class="date">${exp.date}</p>
                 ${hasDescription ? `
@@ -648,6 +652,34 @@ class PortfolioManager {
         this.closeModals();
     }
 
+    uploadExpLogo() {
+        document.getElementById('logoInput').click();
+    }
+    
+    handleExpLogoUpload(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Store the logo data temporarily
+                this.tempExpLogo = e.target.result;
+                
+                // Update UI
+                document.getElementById('logoFileName').textContent = file.name;
+                document.getElementById('logoPreview').style.display = 'block';
+                document.getElementById('logoPreviewImg').src = this.tempExpLogo;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    removeExpLogo() {
+        this.tempExpLogo = null;
+        document.getElementById('logoFileName').textContent = 'No file chosen';
+        document.getElementById('logoPreview').style.display = 'none';
+        document.getElementById('logoPreviewImg').src = '';
+    }
+
     generateMonthOptions(selectedMonth = '') {
         const months = [
             'January', 'February', 'March', 'April', 'May', 'June',
@@ -672,6 +704,16 @@ class PortfolioManager {
         this.showEditModal('Add Experience', `
             <input type="text" id="expTitle" placeholder="Company">
             <input type="text" id="expCompany" placeholder="Job Title">
+            <div style="margin: 15px 0;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Company Logo (optional):</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button type="button" onclick="portfolio.uploadExpLogo()" style="padding: 8px 12px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">Choose Logo</button>
+                    <span id="logoFileName" style="color: #666; font-size: 12px;">No file chosen</span>
+                </div>
+                <div id="logoPreview" style="margin-top: 10px; display: none;">
+                    <img id="logoPreviewImg" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+            </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0;">
                 <div>
                     <label>Start Date:</label>
@@ -706,6 +748,9 @@ class PortfolioManager {
             <textarea id="expDescription" placeholder="Job description (optional)..."></textarea>
             <button onclick="portfolio.saveExperience()">Save</button>
         `);
+        
+        // Reset logo storage
+        this.tempExpLogo = null;
     }
 
     toggleCurrentJob() {
@@ -762,12 +807,16 @@ class PortfolioManager {
                 endYear: isCurrent ? null : parseInt(endYear),
                 isCurrent,
                 date: `${startDate} - ${endDate}`,
-                description
+                description,
+                logo: this.tempExpLogo || null // Include the logo if uploaded
             };
             this.data.experiences.push(newExp);
             await this.saveData();
             this.renderContent();
             this.closeModals();
+            
+            // Clear temporary logo storage
+            this.tempExpLogo = null;
         } else {
             alert('Please fill title, company, and start date!');
         }
@@ -780,6 +829,17 @@ class PortfolioManager {
         this.showEditModal('Edit Experience', `
             <input type="text" id="expTitle" placeholder="Company" value="${exp.company}">
             <input type="text" id="expCompany" placeholder="Job title" value="${exp.title}">
+            <div style="margin: 15px 0;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Company Logo (optional):</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button type="button" onclick="portfolio.uploadExpLogo()" style="padding: 8px 12px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">Choose Logo</button>
+                    <span id="logoFileName" style="color: #666; font-size: 12px;">${exp.logo ? 'Logo uploaded' : 'No file chosen'}</span>
+                    ${exp.logo ? `<button type="button" onclick="portfolio.removeExpLogo()" style="padding: 4px 8px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Remove</button>` : ''}
+                </div>
+                <div id="logoPreview" style="margin-top: 10px; ${exp.logo ? 'display: block;' : 'display: none;'}">
+                    <img id="logoPreviewImg" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px;" src="${exp.logo || ''}">
+                </div>
+            </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0;">
                 <div>
                     <label>Start Date:</label>
@@ -814,6 +874,10 @@ class PortfolioManager {
             <textarea id="expDescription" placeholder="Job description (optional)...">${exp.description}</textarea>
             <button onclick="portfolio.updateExperience(${id})">Update</button>
         `);
+        
+        // Store current logo for editing
+        this.tempExpLogo = exp.logo;
+        this.editingExpId = id;
     }
 
     async updateExperience(id) {
@@ -857,11 +921,16 @@ class PortfolioManager {
                     isCurrent,
                     date: `${startDate} - ${endDate}`,
                     description,
+                    logo: this.tempExpLogo, // Use the updated logo (could be null if removed)
                     order: this.data.experiences[expIndex].order // Preserve existing order
                 };
                 await this.saveData();
                 this.renderContent();
                 this.closeModals();
+                
+                // Clear temporary logo storage
+                this.tempExpLogo = null;
+                this.editingExpId = null;
             }
         } else {
             alert('Please fill title, company, and start date!');
