@@ -71,7 +71,8 @@ class PortfolioManager {
                     github: "https://github.com/taranagarwal",
                     linkedin: "https://www.linkedin.com/in/agarwaltaran/"
                 }
-            }
+            },
+            resume: null
         };
     }
 
@@ -114,6 +115,12 @@ class PortfolioManager {
         
         // Logo upload
         document.getElementById('logoInput').addEventListener('change', (e) => this.handleExpLogoUpload(e));
+
+        // Resume upload
+        document.getElementById('resumeInput').addEventListener('change', (e) => this.handleResumeUpload(e));
+
+        // Resume link click
+        document.getElementById('resumeLink').addEventListener('click', (e) => this.openResume(e));
 
         // Image editor events
         document.getElementById('zoomSlider').addEventListener('input', () => this.updateCanvas());
@@ -441,6 +448,14 @@ class PortfolioManager {
                 document.getElementById('linkedinLink').href = this.data.header.socialLinks.linkedin;
             }
         }
+        
+        // Show/hide resume link based on whether resume is uploaded
+        const resumeLink = document.getElementById('resumeLink');
+        if (this.data.resume) {
+            resumeLink.style.display = 'flex';
+        } else {
+            resumeLink.style.display = 'none';
+        }
     }
 
     renderExperiences() {
@@ -716,6 +731,39 @@ class PortfolioManager {
                 document.getElementById('logoPreviewImg').src = this.tempExpLogo;
             };
             reader.readAsDataURL(file);
+        }
+    }
+
+    async handleResumeUpload(e) {
+        const file = e.target.files[0];
+        if (file && file.type === 'application/pdf') {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                this.data.resume = e.target.result;
+                await this.saveData();
+                this.renderContent();
+                this.closeModals();
+            };
+            reader.readAsDataURL(file);
+        } else if (file) {
+            alert('Please select a PDF file.');
+        }
+    }
+
+    openResume(e) {
+        e.preventDefault();
+        if (this.data.resume) {
+            // Create blob from base64 data and open in new tab
+            const base64Data = this.data.resume.split(',')[1];
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
         }
     }
 
@@ -1248,6 +1296,7 @@ class PortfolioManager {
     editSocialLinks() {
         const currentGithub = this.data.header?.socialLinks?.github || '';
         const currentLinkedin = this.data.header?.socialLinks?.linkedin || '';
+        const hasResume = this.data.resume ? true : false;
         
         this.showEditModal('Edit Social Links', `
             <label style="display: block; margin-bottom: 5px; font-weight: bold;">GitHub URL:</label>
@@ -1255,6 +1304,17 @@ class PortfolioManager {
             
             <label style="display: block; margin-bottom: 5px; margin-top: 15px; font-weight: bold;">LinkedIn URL:</label>
             <input type="url" id="linkedinUrlInput" placeholder="https://www.linkedin.com/in/yourprofile" value="${currentLinkedin}">
+            
+            <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 10px; font-weight: bold;">Resume (PDF):</label>
+                ${hasResume ? `
+                    <div style="margin-bottom: 10px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+                        <span style="color: #27ae60;">✓ Resume uploaded</span>
+                        <button type="button" onclick="portfolio.removeResume()" style="margin-left: 10px; padding: 4px 8px; background: #e74c3c; color: white; border: none; border-radius: 4px; font-size: 12px;">Remove</button>
+                    </div>
+                ` : ''}
+                <button type="button" onclick="portfolio.uploadResume()" style="padding: 8px 12px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">${hasResume ? 'Replace Resume' : 'Upload Resume'}</button>
+            </div>
             
             <button onclick="portfolio.saveSocialLinks()">Save</button>
         `);
@@ -1277,6 +1337,20 @@ class PortfolioManager {
         await this.saveData();
         this.renderContent();
         this.closeModals();
+    }
+
+    uploadResume() {
+        document.getElementById('resumeInput').click();
+    }
+
+    async removeResume() {
+        if (confirm('Are you sure you want to remove your resume?')) {
+            this.data.resume = null;
+            await this.saveData();
+            this.renderContent();
+            // Refresh the modal to show updated state
+            this.editSocialLinks();
+        }
     }
 
 }
