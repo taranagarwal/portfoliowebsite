@@ -14,30 +14,60 @@ class PortfolioManager {
     }
 
     async init() {
-        this.currentFingerprint = await this.generateFingerprint();
+        // FAST PATH: Load and display data immediately (highest priority)
+        this.data = await this.loadDataFast();
+        this.renderContent(); // Show content as fast as possible
         
-        // Initialize Supabase if credentials are provided
-        if (this.supabaseUrl.startsWith('https://') && this.supabaseAnonKey.startsWith('eyJ')) {
-            this.supabase = supabase.createClient(this.supabaseUrl, this.supabaseAnonKey);
-            
-            if (this.supabaseServiceKey && this.supabaseServiceKey.startsWith('eyJ')) {
-                this.supabaseAdmin = supabase.createClient(this.supabaseUrl, this.supabaseServiceKey);
-            }
-        }
+        // PARALLEL: Do other initialization in the background
+        const initPromises = [
+            this.initializeAuth(),
+            this.initializeSupabase(),
+            this.bindEvents()
+        ];
         
-        // Auto-login if authorized user
-        if (this.authorizedFingerprints.includes(this.currentFingerprint)) {
-            this.isLoggedIn = true;
-        }
+        // Wait for background initialization to complete
+        await Promise.all(initPromises);
         
-        this.data = await this.loadData();
-        this.bindEvents();
-        this.renderContent();
+        // Update UI once everything is ready
         this.updateUIBasedOnAuth();
     }
 
+    async loadDataFast() {
+        // Try localStorage first (fastest option)
+        try {
+            const saved = localStorage.getItem('portfolioData');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+        } catch (error) {
+            console.warn('Error loading from localStorage:', error);
+        }
+        
+        // Return default data if nothing saved
+        return this.getDefaultData();
+    }
+
     async loadData() {
-        // If Supabase is available, try to load from database
+        // Enhanced data loading with Supabase fallback (used for updates)
+        
+        // Try localStorage first (fastest)
+        try {
+            const saved = localStorage.getItem('portfolioData');
+            if (saved) {
+                const localData = JSON.parse(saved);
+                
+                // If Supabase is available, check for updates in background
+                if (this.supabase) {
+                    this.syncWithSupabase(localData);
+                }
+                
+                return localData;
+            }
+        } catch (error) {
+            console.warn('Error loading from localStorage:', error);
+        }
+        
+        // If no local data, try Supabase
         if (this.supabase) {
             try {
                 const { data, error } = await this.supabase
@@ -48,18 +78,50 @@ class PortfolioManager {
                     .limit(1);
                 
                 if (data && data.length > 0 && !error) {
+                    // Save to localStorage for next time
+                    localStorage.setItem('portfolioData', JSON.stringify(data[0].content));
                     return data[0].content;
                 }
             } catch (error) {
-                // Supabase error - fall through to localStorage
+                console.warn('Error loading from Supabase:', error);
             }
         }
         
-        // Fallback to localStorage
-        const saved = localStorage.getItem('portfolioData');
-        if (saved) {
-            return JSON.parse(saved);
+        return this.getDefaultData();
+    }
+
+    async syncWithSupabase(localData) {
+        // Background sync - don't block UI
+        try {
+            const { data, error } = await this.supabase
+                .from('portfolio_data')
+                .select('content, updated_at')
+                .eq('data_type', 'main')
+                .order('updated_at', { ascending: false })
+                .limit(1);
+            
+            if (data && data.length > 0 && !error) {
+                const serverData = data[0];
+                const localTimestamp = localStorage.getItem('portfolioDataTimestamp');
+                
+                // If server data is newer, update local storage and re-render
+                if (!localTimestamp || new Date(serverData.updated_at) > new Date(localTimestamp)) {
+                    localStorage.setItem('portfolioData', JSON.stringify(serverData.content));
+                    localStorage.setItem('portfolioDataTimestamp', serverData.updated_at);
+                    
+                    // Update data and re-render if content changed
+                    if (JSON.stringify(this.data) !== JSON.stringify(serverData.content)) {
+                        this.data = serverData.content;
+                        this.renderContent();
+                    }
+                }
+            }
+        } catch (error) {
+            // Silent fail for background sync
         }
+    }
+
+    getDefaultData() {
         return {
             about: "",
             experiences: [],
@@ -76,32 +138,115 @@ class PortfolioManager {
         };
     }
 
-    async saveData() {
-        // Save to localStorage as backup
-        localStorage.setItem('portfolioData', JSON.stringify(this.data));
-        
-        // Save to Supabase if available (admin only)
-        if (this.supabaseAdmin) {
-            try {
-                const { error } = await this.supabaseAdmin
-                    .from('portfolio_data')
-                    .insert({
-                        data_type: 'main',
-                        content: this.data,
-                        updated_at: new Date().toISOString()
-                    });
-                
-                // Data saved successfully or handle error silently
-            } catch (error) {
-                // Handle error silently
+    async initializeAuth() {
+        // Generate fingerprint (can be slow, so done in background)
+        try {
+            // Check if we have a cached fingerprint
+            const cachedFingerprint = sessionStorage.getItem('portfolioFingerprint');
+            if (cachedFingerprint) {
+                this.currentFingerprint = cachedFingerprint;
+            } else {
+                this.currentFingerprint = await this.generateFingerprint();
+                sessionStorage.setItem('portfolioFingerprint', this.currentFingerprint);
             }
+            
+            // Auto-login if authorized user
+            if (this.authorizedFingerprints.includes(this.currentFingerprint)) {
+                this.isLoggedIn = true;
+            }
+        } catch (error) {
+            console.warn('Error initializing auth:', error);
+            this.currentFingerprint = 'fallback-' + Date.now();
         }
     }
 
-    bindEvents() {
+    async initializeSupabase() {
+        // Initialize Supabase (non-blocking for UI)
+        try {
+            if (this.supabaseUrl.startsWith('https://') && this.supabaseAnonKey.startsWith('eyJ')) {
+                this.supabase = supabase.createClient(this.supabaseUrl, this.supabaseAnonKey);
+                
+                if (this.supabaseServiceKey && this.supabaseServiceKey.startsWith('eyJ')) {
+                    this.supabaseAdmin = supabase.createClient(this.supabaseUrl, this.supabaseServiceKey);
+                }
+            }
+        } catch (error) {
+            console.warn('Error initializing Supabase:', error);
+        }
+    }
+
+    async saveData() {
+        // Save to localStorage as backup (synchronous and fast)
+        const timestamp = new Date().toISOString();
+        localStorage.setItem('portfolioData', JSON.stringify(this.data));
+        localStorage.setItem('portfolioDataTimestamp', timestamp);
+        
+        // Save to Supabase if available (admin only) - do this in background
+        if (this.supabaseAdmin) {
+            // Don't await this - let it happen in background
+            this.saveToSupabase(timestamp).catch(error => {
+                console.warn('Background save to Supabase failed:', error);
+            });
+        }
+    }
+
+    async saveToSupabase(timestamp) {
+        try {
+            const { error } = await this.supabaseAdmin
+                .from('portfolio_data')
+                .insert({
+                    data_type: 'main',
+                    content: this.data,
+                    updated_at: timestamp
+                });
+            
+            if (error) {
+                console.warn('Supabase save error:', error);
+            }
+        } catch (error) {
+            console.warn('Error saving to Supabase:', error);
+        }
+    }
+
+    async bindEvents() {
+        // Bind critical events first (most important for functionality)
+        this.bindCriticalEvents();
+        
+        // Use requestIdleCallback to bind less critical events when browser is idle
+        if (window.requestIdleCallback) {
+            requestIdleCallback(() => {
+                this.bindNonCriticalEvents();
+            });
+        } else {
+            // Fallback for browsers without requestIdleCallback
+            setTimeout(() => {
+                this.bindNonCriticalEvents();
+            }, 100);
+        }
+    }
+
+    bindCriticalEvents() {
+        // Only bind events essential for immediate functionality
+        
         // Auth events
         document.getElementById('previewBtn').addEventListener('click', () => this.togglePreviewMode());
 
+        // Modal close events (important for UX)
+        document.querySelectorAll('.close').forEach(close => {
+            close.addEventListener('click', () => this.closeModals());
+        });
+
+        // Escape key to close modals
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.closeModals();
+            }
+        });
+    }
+
+    bindNonCriticalEvents() {
+        // Bind all other events that can wait
+        
         // Edit events
         document.getElementById('editAboutBtn').addEventListener('click', () => this.editAbout());
         document.getElementById('editPhotoBtn').addEventListener('click', () => this.editPhoto());
@@ -110,16 +255,10 @@ class PortfolioManager {
         document.getElementById('addExperienceBtn').addEventListener('click', () => this.addExperience());
         document.getElementById('addProjectBtn').addEventListener('click', () => this.addProject());
 
-        // Photo upload
+        // File upload events
         document.getElementById('photoInput').addEventListener('change', (e) => this.handlePhotoUpload(e));
-        
-        // Logo upload
         document.getElementById('logoInput').addEventListener('change', (e) => this.handleExpLogoUpload(e));
-
-        // Resume upload
         document.getElementById('resumeInput').addEventListener('change', (e) => this.handleResumeUpload(e));
-
-        // Resume link click
         document.getElementById('resumeLink').addEventListener('click', (e) => this.openResume(e));
 
         // Image editor events
@@ -129,19 +268,7 @@ class PortfolioManager {
         document.getElementById('resetPosition').addEventListener('click', () => this.resetImageEditor());
         document.getElementById('savePhoto').addEventListener('click', () => this.saveEditedImage());
 
-        // Modal events
-        document.querySelectorAll('.close').forEach(close => {
-            close.addEventListener('click', () => this.closeModals());
-        });
-
-        // Add escape key to close modals
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                this.closeModals();
-            }
-        });
-
-        // Add formatting keyboard shortcuts to textareas
+        // Formatting keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'TEXTAREA' && (e.target.id === 'expDescription' || e.target.id === 'projectDescription')) {
                 this.handleTextareaFormatting(e);
@@ -322,57 +449,23 @@ class PortfolioManager {
 
     async generateFingerprint() {
         try {
-            // Create stable canvas fingerprint (no timing)
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = 200;
-            canvas.height = 50;
+            // Simplified, faster fingerprinting
+            const fingerprint = [
+                screen.width,
+                screen.height,
+                screen.colorDepth,
+                navigator.language,
+                navigator.platform,
+                navigator.hardwareConcurrency || 0,
+                navigator.deviceMemory || 0,
+                Intl.DateTimeFormat().resolvedOptions().timeZone,
+                navigator.userAgent.slice(0, 50) // Shorter slice for speed
+            ].join('|');
             
-            // Draw stable pattern
-            ctx.fillStyle = 'rgb(102, 204, 0)';
-            ctx.fillRect(0, 0, 200, 50);
-            ctx.fillStyle = 'rgb(255, 0, 102)';
-            ctx.font = '18px Arial';
-            ctx.fillText('Unique Browser Test', 2, 20);
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = 'blue';
-            ctx.fillRect(100, 5, 80, 40);
-            
-            // Get WebGL info (very browser/GPU specific)
-            let webglInfo = 'no-webgl';
-            try {
-                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-                if (gl) {
-                    const renderer = gl.getParameter(gl.RENDERER);
-                    const vendor = gl.getParameter(gl.VENDOR);
-                    webglInfo = `${vendor}-${renderer}`;
-                }
-            } catch(e) {}
-            
-            const fingerprint = {
-                screen: `${screen.width}x${screen.height}x${screen.colorDepth}`,
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                language: navigator.language,
-                platform: navigator.userAgentData?.platform || navigator.platform,
-                userAgent: navigator.userAgent.slice(0, 100),
-                canvas: canvas.toDataURL(),
-                webgl: webglInfo,
-                memory: navigator.deviceMemory || 'unknown',
-                cores: navigator.hardwareConcurrency || 'unknown'
-            };
-            
-            // Create stable hash
-            const jsonStr = JSON.stringify(fingerprint);
-            let hash = 0;
-            for (let i = 0; i < jsonStr.length; i++) {
-                const char = jsonStr.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash;
-            }
-            
-            return hash.toString();
+            // Fast hash
+            return this.simpleHash(fingerprint);
         } catch (error) {
-            return 'stable-fallback';
+            return 'stable-fallback-' + Math.random().toString(36).substr(2, 9);
         }
     }
 
