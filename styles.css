@@ -45,11 +45,14 @@ header {
     display: flex;
     align-items: center;
     gap: 2rem;
+    height: 100%;
 }
 
 .social-links {
     display: flex;
+    align-items: center;
     gap: 1rem;
+    height: 100%;
 }
 
 .social-link {
@@ -91,6 +94,13 @@ button {
     align-items: center;
     justify-content: center;
     min-height: 32px;
+    font-family: inherit;
+    line-height: 1;
+    box-sizing: border-box;
+    vertical-align: baseline;
+    margin: 0;
+    background: none;
+    outline: none;
 }
 
 .preview-btn {
@@ -114,13 +124,13 @@ button {
 }
 
 .edit-btn {
-    background-color: #e74c3c;
+    background-color: #3498db;
     color: white;
     margin-top: 10px;
 }
 
 .edit-btn:hover {
-    background-color: #c0392b;
+    background-color: #2980b9;
     transform: translateY(-1px);
 }
 
@@ -242,64 +252,70 @@ main {
 
 .item-buttons {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     margin-top: 15px;
     justify-content: flex-end;
     align-items: center;
+    height: 32px;
 }
 
-.edit-btn,
-.delete-btn,
-.reorder-btn {
-    background-color: #3498db;
-    color: white;
-    padding: 8px 12px;
-    font-size: 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    min-width: 60px;
-    height: 32px;
-    text-align: center;
-    display: inline-flex;
+.item-buttons .edit-btn,
+.item-buttons .delete-btn,
+.item-buttons .reorder-btn {
+    /* Reset everything */
+    all: unset;
+    
+    /* Set exact properties */
+    display: flex;
     align-items: center;
     justify-content: center;
+    width: 60px;
+    height: 32px;
+    background-color: #3498db;
+    color: white;
+    border-radius: 4px;
+    font-size: 12px;
     font-weight: 500;
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    cursor: pointer;
     transition: all 0.2s ease;
+    box-sizing: border-box;
+    text-align: center;
+    line-height: 1;
+    white-space: nowrap;
 }
 
-.reorder-btn {
-    background-color: #95a5a6;
-    min-width: 32px;
+.item-buttons .reorder-btn {
     width: 32px;
+    background-color: #95a5a6;
+    font-size: 16px;
     font-weight: bold;
-    font-size: 14px;
 }
 
-.reorder-btn:hover:not(:disabled) {
-    background-color: #7f8c8d;
-    transform: translateY(-1px);
-}
-
-.reorder-btn:disabled {
-    background-color: #bdc3c7;
-    cursor: not-allowed;
-    opacity: 0.6;
-    transform: none;
-}
-
-.delete-btn {
+.item-buttons .delete-btn {
     background-color: #e74c3c;
 }
 
-.edit-btn:hover {
+.item-buttons .edit-btn:hover {
     background-color: #2980b9;
     transform: translateY(-1px);
 }
 
-.delete-btn:hover {
+.item-buttons .delete-btn:hover {
     background-color: #c0392b;
     transform: translateY(-1px);
+}
+
+.item-buttons .reorder-btn:hover:not(:disabled) {
+    background-color: #7f8c8d;
+    transform: translateY(-1px);
+}
+
+.item-buttons .reorder-btn:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
 }
 
 /* Projects Section */
