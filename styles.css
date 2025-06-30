@@ -631,11 +631,69 @@ code {
     margin: 5% auto;
     padding: 20px;
     border-radius: 10px;
-    width: 80%;
-    max-width: 500px;
+    width: 85%;
+    max-width: 800px;
     max-height: 90vh;
     overflow-y: auto;
     position: relative;
+}
+
+.modal-content.read-more-modal {
+    width: 90%;
+    max-width: 1000px;
+    max-height: 85vh;
+    padding: 30px;
+}
+
+.modal-content.read-more-modal .close {
+    right: 20px;
+    top: 20px;
+}
+
+.modal-content.read-more-modal h2 {
+    font-size: 1.8em;
+    margin-bottom: 25px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #3498db;
+}
+
+.modal-content.read-more-modal h1 {
+    font-size: 2em;
+    margin: 25px 0 20px 0;
+}
+
+.modal-content.read-more-modal h2:not(.modal-title) {
+    font-size: 1.6em;
+    margin: 22px 0 15px 0;
+}
+
+.modal-content.read-more-modal h3 {
+    font-size: 1.4em;
+    margin: 20px 0 12px 0;
+}
+
+.modal-content.read-more-modal p {
+    font-size: 16px;
+    line-height: 1.7;
+    margin: 15px 0;
+}
+
+.modal-content.read-more-modal ul, 
+.modal-content.read-more-modal ol {
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 15px 0;
+}
+
+.modal-content.read-more-modal pre {
+    font-size: 14px;
+    margin: 20px 0;
+}
+
+.modal-content.read-more-modal blockquote {
+    font-size: 16px;
+    margin: 20px 0;
+    padding: 15px 20px;
 }
 
 .close {
@@ -816,6 +874,16 @@ code {
     .modal-content {
         width: 95%;
         margin: 10% auto;
+        padding: 15px;
+        max-width: none;
+    }
+    
+    .modal-content.read-more-modal {
+        width: 95%;
+        max-width: none;
+        margin: 5% auto;
+        padding: 20px;
+        max-height: 90vh;
     }
     
     .image-editor-container {

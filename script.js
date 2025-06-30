@@ -410,11 +410,31 @@ class PortfolioManager {
 
     showReadMoreModal(title, fullDescription) {
         const formattedDescription = this.formatMarkdown(fullDescription);
-        this.showEditModal(title, `
-            <div style="max-height: 400px; overflow-y: auto; padding: 10px;">
-                <div style="line-height: 1.6; margin: 0; white-space: pre-wrap;">${formattedDescription}</div>
+        const modal = document.getElementById('editModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        // Add the read-more-modal class for larger size
+        modalContent.classList.add('read-more-modal');
+        
+        modal.querySelector('h2').textContent = title;
+        modal.querySelector('#editForm').innerHTML = `
+            <div style="max-height: 70vh; overflow-y: auto; padding: 15px; font-size: 16px; line-height: 1.7;">
+                ${formattedDescription}
             </div>
-        `);
+        `;
+        modal.style.display = 'block';
+        
+        // Remove the class when modal closes to not affect other modals
+        const closeModal = () => {
+            modalContent.classList.remove('read-more-modal');
+            modal.style.display = 'none';
+        };
+        
+        // Add event listeners for closing
+        modal.querySelector('.close').onclick = closeModal;
+        modal.onclick = (e) => {
+            if (e.target === modal) closeModal();
+        };
     }
 
     formatMarkdown(text, includeLineBreaks = true) {
