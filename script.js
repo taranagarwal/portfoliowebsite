@@ -15,6 +15,11 @@ class PortfolioManager {
 
     async init() {
         this.currentFingerprint = await this.generateFingerprint();
+
+        // Uncomment to view your fingerprint in console
+        // This is useful for debugging and ensuring your fingerprint matches the authorized list
+        
+        // console.log('Your fingerprint:', this.currentFingerprint);
         
         // Initialize Supabase if credentials are provided
         if (this.supabaseUrl.startsWith('https://') && this.supabaseAnonKey.startsWith('eyJ')) {
@@ -423,11 +428,13 @@ class PortfolioManager {
             </div>
         `;
         modal.style.display = 'block';
+        document.body.classList.add('modal-open');
         
         // Remove the class when modal closes to not affect other modals
         const closeModal = () => {
             modalContent.classList.remove('read-more-modal');
             modal.style.display = 'none';
+            document.body.classList.remove('modal-open');
         };
         
         // Add event listeners for closing
@@ -847,6 +854,7 @@ class PortfolioManager {
     showImageEditor() {
         const modal = document.getElementById('imageEditorModal');
         modal.style.display = 'block';
+        document.body.classList.add('modal-open');
         
         this.canvas = document.getElementById('imageCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -1514,12 +1522,14 @@ class PortfolioManager {
         modal.querySelector('h2').textContent = title;
         modal.querySelector('#editForm').innerHTML = content;
         modal.style.display = 'block';
+        document.body.classList.add('modal-open');
     }
 
     closeModals() {
         document.querySelectorAll('.modal').forEach(modal => {
             modal.style.display = 'none';
         });
+        document.body.classList.remove('modal-open');
     }
 
     editHeader() {

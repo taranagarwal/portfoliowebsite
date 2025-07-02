@@ -79,7 +79,7 @@ git push
 
 To test Supabase locally, you'll need to temporarily add your credentials to `script.js`:
 
-1. Replace the placeholder values in lines 8-9 with your actual credentials
+1. Replace the placeholder values in lines 8-9 of `script.js` with your actual credentials
 2. Test locally, then **revert these changes** before committing
 3. The GitHub Action handles credentials for production
 

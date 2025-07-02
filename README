@@ -1,52 +1,105 @@
 # Portfolio Website
 
-A responsive, editable portfolio website with admin authentication.
+A responsive, editable portfolio website with fingerprint-based authentication and Supabase backend integration.
 
-## Setup
+### Prerequisites
+- A GitHub account
+- A Supabase account (free at [supabase.com](https://supabase.com))
 
-1. **Clone the repository**
-2. **Set up configuration:**
-   ```bash
-   cp config.example.js config.js
-   ```
-3. **Edit config.js** and set your admin password:
+### 1. Fork & Clone
+```bash
+git clone https://github.com/YOUR_USERNAME/portfoliowebsite.git
+cd portfoliowebsite
+```
+
+### 2. Set Up Supabase (Required for Data Persistence)
+Follow the detailed [SUPABASE_SETUP.md](SUPABASE_SETUP.md) guide to:
+- Create a Supabase project and database table
+- Get your API credentials
+- Set up GitHub Secrets for secure deployment
+
+### 3. Configure Authentication
+The site uses fingerprint-based authentication. To find your fingerprint:
+
+1. Open the site locally (`index.html` in your browser)
+2. Open browser console (F12)
+3. You'll see a message like: `Your fingerprint: -1877139945`
+4. Copy this number and update `script.js` line 5:
    ```javascript
-   window.CONFIG = {
-       ADMIN_PASSWORD: 'your-secure-password-here'
-   };
+   this.authorizedFingerprints = ['-1877139945', 'YOUR_FINGERPRINT_HERE'];
    ```
-4. **Open index.html** in your browser
 
-## Features
+### 4. Deploy with GitHub Actions
+The repository includes automated GitHub Actions deployment:
+- Push to main branch automatically deploys to GitHub Pages
+- Supabase credentials are securely injected during build
+- No manual deployment steps needed
 
-- Responsive design
-- Admin login for editing content
-- Photo editor with zoom/pan
-- Automatic experience sorting
-- Export data for deployment
+### 5. Edit Your Portfolio
+1. Visit your live site
+2. You'll automatically be in edit mode (fingerprint authentication)
+3. Click "Preview Mode" to toggle between edit and preview
+4. Add your experiences, projects, about section, and profile photo
+5. All changes are saved to Supabase and visible to all visitors
 
-## Security
+## ✨ Features
 
-- Password is stored in `config.js` (not committed to git)
-- Use `.gitignore` to protect sensitive files
-- Change the default password before deployment
+- **Fingerprint Authentication**: Secure, password-free editing
+- **Supabase Integration**: Real-time data persistence across devices
+- **Responsive Design**: Looks great on all devices
+- **Markdown Support**: Rich text formatting with keyboard shortcuts
+- **Photo Editor**: Built-in crop and zoom for profile photos
+- **Automatic Deployment**: GitHub Actions handles everything
+- **No Backend Required**: Serverless architecture with Supabase
 
-## Deployment
+## 🔧 Technology Stack
 
-1. Edit all content locally
-2. Login and click "Export Data"
-3. Replace default data in `script.js` with exported data
-4. Deploy to GitHub Pages, Netlify, or Vercel
-5. For deployment, you can remove the login system entirely
+- **Frontend**: Vanilla HTML, CSS, JavaScript
+- **Backend**: Supabase (PostgreSQL + REST API)
+- **Deployment**: GitHub Pages + GitHub Actions
+- **Authentication**: Browser fingerprinting
 
-## File Structure
+## 📁 File Structure
 
 ```
-├── index.html          # Main page
-├── styles.css          # Styling
-├── script.js           # Main functionality
-├── config.js           # Configuration (not in git)
-├── config.example.js   # Template for config
-├── .gitignore         # Git ignore rules
-└── README.md          # This file
+├── index.html              # Main page
+├── styles.css              # Styling
+├── script.js               # Main functionality & fingerprint config
+├── SUPABASE_SETUP.md       # Detailed setup guide
+├── .github/workflows/      # Auto-deployment configuration
+└── README                  # This file
 ```
+
+## 🔒 Security
+
+- **Fingerprint Authentication**: Only your browser can edit the portfolio
+- **GitHub Secrets**: API credentials never exposed in code
+- **Public Data**: Portfolio content is public by design
+- **No Passwords**: No passwords to manage or leak
+
+## 🛠️ Local Development
+
+1. Clone the repository
+2. Open `index.html` in your browser
+3. Use the browser console to find your fingerprint
+4. Update the fingerprint in `script.js`
+5. For Supabase testing, temporarily add credentials to `script.js` (revert before committing)
+
+## 📝 Customization Tips
+
+- **Styling**: Modify `styles.css` for custom colors and layouts
+- **Functionality**: Extend `script.js` for additional features
+- **Content**: All content is editable through the web interface
+- **Deployment**: Works with any static hosting (Netlify, Vercel, etc.)
+
+## 🤝 Contributing
+
+This is a personal portfolio template, but feel free to:
+- Open issues for bugs
+- Suggest improvements
+- Share your customizations
+- Fork and make it your own
+
+## 📄 License
+
+Open source - feel free to fork and customize for your own portfolio!
