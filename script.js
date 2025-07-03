@@ -14,7 +14,6 @@ class PortfolioManager {
     }
 
     async init() {
-        this.currentFingerprint = await this.generateFingerprint();
 
         // Uncomment to view your fingerprint in console
         // This is useful for debugging and ensuring your fingerprint matches the authorized list
@@ -31,13 +30,16 @@ class PortfolioManager {
         }
         
         // Auto-login if authorized user
-        if (this.authorizedFingerprints.includes(this.currentFingerprint)) {
-            this.isLoggedIn = true;
-        }
         
         this.data = await this.loadData();
         this.bindEvents();
         this.renderContent();
+
+        this.currentFingerprint = await this.generateFingerprint();
+        if (this.authorizedFingerprints.includes(this.currentFingerprint)) {
+            this.isLoggedIn = true;
+        }
+        
         this.updateUIBasedOnAuth();
     }
 
