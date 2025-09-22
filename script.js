@@ -20,7 +20,7 @@ class PortfolioManager {
         // Uncomment to view your fingerprint in console
         // This is useful for debugging and ensuring your fingerprint matches the authorized list
         
-        console.log('Your fingerprint:', this.currentFingerprint);
+        // console.log('Your fingerprint:', this.currentFingerprint);
         
         // Initialize Supabase if credentials are provided
         if (this.supabaseUrl.startsWith('https://') && this.supabaseAnonKey.startsWith('eyJ')) {
