@@ -1,137 +1,349 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Taran Agarwal</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><pattern id='dots' patternUnits='userSpaceOnUse' width='20' height='20'><circle cx='10' cy='10' r='2' fill='%23ffffff20'/></pattern></defs><rect width='100' height='100' fill='%23007acc'/><rect width='100' height='100' fill='url(%23dots)'/><circle cx='25' cy='25' r='15' fill='%23ffffff10'/><circle cx='75' cy='75' r='12' fill='%23ffffff15'/><circle cx='80' cy='30' r='8' fill='%23ffffff08'/><text x='50' y='70' font-family='Arial,sans-serif' font-size='60' font-weight='bold' text-anchor='middle' fill='white'>T</text></svg>">
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Taran Agarwal — Software Engineer</title>
+<meta name="description" content="Taran Agarwal — Software Engineer at Abridge." />
+<meta name="author" content="Taran Agarwal" />
+<meta name="theme-color" content="#07080a" />
+<link rel="canonical" href="https://taranagarwal.com/" />
+<!-- Open Graph / social -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Taran Agarwal — Software Engineer" />
+<meta property="og:description" content="Software Engineer at Abridge." />
+<meta property="og:url" content="https://taranagarwal.com/" />
+<!-- Favicon: terminal prompt mark -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2307080a'/%3E%3Ctext x='20' y='66' font-family='SFMono-Regular,Menlo,monospace' font-size='46' font-weight='700' fill='%2338e8c6'%3E%26gt;%3C/text%3E%3Crect x='52' y='40' width='26' height='8' rx='2' fill='%23e8e9ee'/%3E%3C/svg%3E" />
+<style>
+  :root {
+    --bg: #07080a;
+    --ink: #e8e9ee;
+    --ink-dim: #9a9ca6;
+    --ink-faint: #5a5c66;
+    --line: rgba(255,255,255,0.09);
+    --green: #4ee6a8;
+    --teal: #38e8c6;
+    --indigo: #7b86ff;
+    --glass: rgba(20,22,28,0.55);
+    --ease: cubic-bezier(0.16,1,0.3,1);
+    --mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, Menlo, monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--mono);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ---------- background layers ---------- */
+  .bg-grid {
+    position: fixed; inset: 0; z-index: -3;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 46px 46px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 30%, transparent 100%);
+  }
+  .bg-glow {
+    position: fixed; z-index: -2;
+    width: 70vw; height: 70vw;
+    top: -25%; left: 50%; transform: translateX(-50%);
+    background: radial-gradient(circle, rgba(80,90,200,0.16) 0%, rgba(56,232,198,0.06) 40%, transparent 70%);
+    filter: blur(40px);
+    pointer-events: none;
+  }
+  .grain {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ---------- nav ---------- */
+  nav {
+    position: fixed; top:0; left:0; right:0; z-index:20;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid transparent;
+    transition: border-color .4s, background .4s;
+  }
+  nav.scrolled { border-bottom:1px solid var(--line); background: rgba(7,8,10,.6); }
+  .nav-inner {
+    max-width: 880px; margin:0 auto; padding:20px 30px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-size: 15.5px;
+  }
+  .brand { color: var(--ink); }
+  .brand .accent { color: var(--green); }
+  .nav-links { display:flex; gap:22px; }
+  .nav-links a { color: var(--ink-dim); text-decoration:none; transition: color .25s; }
+  .nav-links a:hover { color: var(--ink); }
+
+  /* ---------- layout ---------- */
+  main {
+    min-height: 100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding: 110px 28px 60px;
+  }
+  .stage { width: 100%; max-width: 720px; }
+
+  /* ---------- glass terminal ---------- */
+  .terminal {
+    display: flex; flex-direction: column;
+    height: clamp(380px, 64vh, 560px);
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: var(--glass);
+    backdrop-filter: blur(22px) saturate(140%);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.06) inset,
+      0 40px 80px -30px rgba(0,0,0,0.8),
+      0 0 0 1px rgba(0,0,0,0.3);
+    overflow: hidden;
+    opacity: 0; transform: translateY(20px) scale(0.99);
+    animation: bootUp .9s var(--ease) forwards;
+  }
+  @keyframes bootUp { to { opacity:1; transform:none; } }
+
+  .term-bar {
+    display:flex; align-items:center;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(255,255,255,0.025);
+    flex-shrink: 0;
+  }
+  .dots { display:flex; gap:8px; }
+  .dot { width:12px; height:12px; border-radius:50%; }
+  .dot.r { background:#ff5f57; } .dot.y { background:#febc2e; } .dot.g { background:#28c840; }
+  .term-title {
+    margin-left: 18px;
+    display:inline-flex; align-items:center; gap:7px;
+    color: var(--ink-faint); font-size: 12.5px; letter-spacing: .01em;
+  }
+  .term-title .folder { width:15px; height:15px; flex-shrink:0; }
+
+  .term-body { flex:1; min-height:0; overflow:hidden; padding: 24px 24px 22px; font-size: 15px; }
+  .ln { white-space: pre-wrap; margin-bottom: 7px; }
+  .prompt { color: var(--teal); }
+  .prompt .path { color: var(--indigo); }
+  .cmd { color: var(--ink); }
+  .out { color: var(--ink-dim); padding-left: 2px; margin-bottom: 14px; }
+  .oline { opacity:0; transform: translateY(4px); transition: opacity .35s var(--ease), transform .35s var(--ease); }
+  .oline.show { opacity:1; transform:none; }
+  .oline + .oline { margin-top: 8px; }
+  .out .name {
+    color: var(--ink); font-size: 30px; font-weight: 600; letter-spacing:-0.01em;
+    display:inline-block; line-height:1.2;
+  }
+  .out .role { display:inline-flex; align-items:center; gap:10px; color: var(--ink); font-size: 16.5px; }
+  .out .role .at { color: var(--ink-faint); }
+  .abridge-word { height: 14px; width:auto; filter: brightness(0) invert(1); vertical-align: middle; }
+  .out .hl { color: var(--green); }
+  .cursor {
+    display:inline-block; width:9px; height:18px; background: var(--teal);
+    vertical-align:-3px; margin-left:3px; animation: blink 1.05s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity:0; } }
+
+  /* ---------- inline links (ls output) ---------- */
+  .links {
+    display:flex; flex-direction:column; gap: 12px;
+    margin: 12px 0; padding-left: 2px;
+  }
+  .link {
+    width: fit-content;
+    display:inline-flex; align-items:center; gap:8px;
+    text-decoration:none; color: var(--ink-dim);
+    font-size: 15px;
+    opacity:0; transform: translateY(4px);
+    transition: color .25s, opacity .35s var(--ease), transform .35s var(--ease);
+  }
+  .link.show { opacity:1; transform:none; }
+  .link svg { width:17px; height:17px; color: var(--ink-faint); transition: color .25s; }
+  .link .arrow { color: var(--ink-faint); font-size:13px; opacity:0; transform: translateX(-3px);
+    transition: opacity .25s, transform .25s var(--ease); }
+  .link:hover { color: var(--ink); }
+  .link:hover svg { color: var(--teal); }
+  .link:hover .arrow { opacity:1; transform:none; color: var(--teal); }
+
+  footer {
+    text-align:center; padding: 30px; color: var(--ink-faint); font-size:12px;
+  }
+
+  @media (max-width:560px) {
+    .links { grid-template-columns: 1fr; }
+    .nav-links { gap:16px; }
+    .out .name { font-size: 24px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .terminal { animation:none; opacity:1; transform:none; }
+    .cursor { animation:none; }
+    .links { opacity:1; transform:none; }
+  }
+</style>
 </head>
 <body>
-    <header>
-        <nav>
-            <div class="nav-container">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <h1 id="headerName">Taran Agarwal</h1>
-                    <button id="editHeaderBtn" class="edit-btn" style="display: none; font-size: 12px; padding: 4px 8px;">Edit</button>
-                </div>
-                <div class="nav-links">
-                    <div class="social-links">
-                        <a id="githubLink" href="https://github.com/taranagarwal" target="_blank" class="social-link">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                            </svg>
-                            GitHub
-                        </a>
-                        <a id="linkedinLink" href="https://www.linkedin.com/in/agarwaltaran/" target="_blank" class="social-link">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                            </svg>
-                            LinkedIn
-                        </a>
-                        <a id="resumeLink" href="#" target="_blank" class="social-link" style="display: none;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                            </svg>
-                            Resume
-                        </a>
-                        <button id="editSocialBtn" class="edit-btn" style="display: none; font-size: 12px; padding: 4px 8px; margin-left: 10px;">Edit Links</button>
-                    </div>
-                    <div class="auth-buttons">
-                        <button id="previewBtn" class="preview-btn" style="display: none;">Preview Mode</button>
-                    </div>
-                </div>
-            </div>
-        </nav>
-    </header>
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+  <div class="grain"></div>
 
-    <main>
-        <section id="about" class="section">
-            <div class="container">
-                <h2>About Me</h2>
-                <div class="about-content">
-                    <div class="photo-container">
-                        <img id="profilePhoto" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f0f0f0'/%3E%3Ccircle cx='100' cy='80' r='30' fill='%23ccc'/%3E%3Cellipse cx='100' cy='160' rx='50' ry='30' fill='%23ccc'/%3E%3C/svg%3E" alt="Profile Photo">
-                        <button id="editPhotoBtn" class="edit-btn" style="display: none;">Edit Photo</button>
-                        <input type="file" id="photoInput" accept="image/*" style="display: none;">
-                        <input type="file" id="logoInput" accept="image/*" style="display: none;">
-                        <input type="file" id="resumeInput" accept=".pdf" style="display: none;">
-                    </div>
-                    <div class="about-text">
-                        <div id="aboutText" class="editable-content">
-                            <!-- Content will be loaded by JavaScript -->
-                        </div>
-                        <button id="editAboutBtn" class="edit-btn" style="display: none;">Edit</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="projects" class="section">
-            <div class="container">
-                <h2>Projects</h2>
-                <button id="addProjectBtn" class="add-btn" style="display: none;">Add Project</button>
-                <div id="projectsList" class="projects-list">
-                    <!-- Projects will be loaded by JavaScript -->
-                </div>
-            </div>
-        </section>
-
-        <section id="experiences" class="section">
-            <div class="container">
-                <h2>Experiences</h2>
-                <button id="addExperienceBtn" class="add-btn" style="display: none;">Add Experience</button>
-                <div id="experiencesList" class="experiences-list">
-                    <!-- Experiences will be loaded by JavaScript -->
-                </div>
-            </div>
-        </section>
-    </main>
-
-
-    <!-- Edit Modals -->
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Edit Content</h2>
-            <div id="editForm"></div>
-        </div>
+  <nav id="nav">
+    <div class="nav-inner">
+      <div class="brand">Taran Agarwal</div>
+      <div class="nav-links">
+        <a href="https://github.com/taranagarwal" target="_blank" rel="noopener">github</a>
+        <a href="https://www.linkedin.com/in/agarwaltaran/" target="_blank" rel="noopener">linkedin</a>
+        <a href="mailto:taran.agarwal@gmail.com">email</a>
+        <a href="assets/resume.pdf" target="_blank" rel="noopener">resume</a>
+      </div>
     </div>
+  </nav>
 
-    <!-- Image Editor Modal -->
-    <div id="imageEditorModal" class="modal">
-        <div class="modal-content image-editor">
-            <span class="close">&times;</span>
-            <h2>Edit Photo</h2>
-            <div class="image-editor-container">
-                <div class="canvas-container">
-                    <canvas id="imageCanvas" width="600" height="600"></canvas>
-                    <div class="crop-circle"></div>
-                </div>
-                <div class="editor-controls">
-                    <div class="control-group">
-                        <label>Zoom: <span id="zoomValue">100%</span></label>
-                        <input type="range" id="zoomSlider" min="50" max="300" value="100">
-                    </div>
-                    <div class="control-group">
-                        <label>Move Left/Right:</label>
-                        <input type="range" id="moveX" min="-300" max="300" value="0">
-                    </div>
-                    <div class="control-group">
-                        <label>Move Up/Down:</label>
-                        <input type="range" id="moveY" min="-300" max="300" value="0">
-                    </div>
-                    <div class="editor-buttons">
-                        <button id="resetPosition">Reset</button>
-                        <button id="savePhoto">Save Photo</button>
-                    </div>
-                </div>
-            </div>
+  <main>
+    <div class="stage">
+      <div class="terminal">
+        <div class="term-bar">
+          <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+          <span class="term-title">
+            <svg class="folder" viewBox="0 0 24 24" fill="none"><path d="M3 7.5a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.4.6l1 1a2 2 0 0 0 1.4.6H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5z" fill="#3a92f0"/><path d="M3 10.2h18V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6.8z" fill="#62b0ff"/></svg>
+            taranagarwal — -zsh — <span id="dims">80×24</span>
+          </span>
         </div>
+        <div class="term-body" id="term"></div>
+      </div>
     </div>
+  </main>
 
-</script>
-    <script src="script.js"></script>
+  <footer>© 2026 Taran Agarwal</footer>
+
+  <!-- link cards template, injected after `ls` -->
+  <template id="links-tpl">
+    <div class="links">
+      <a class="link" href="https://github.com/taranagarwal" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        github<span class="arrow">↗</span>
+      </a>
+      <a class="link" href="https://www.linkedin.com/in/agarwaltaran/" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        linkedin<span class="arrow">↗</span>
+      </a>
+      <a class="link" href="mailto:taran.agarwal@gmail.com">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+        taran.agarwal@gmail.com<span class="arrow">↗</span>
+      </a>
+      <a class="link" href="assets/resume.pdf" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>
+        resume.pdf<span class="arrow">↗</span>
+      </a>
+    </div>
+  </template>
+
+  <script>
+    const term = document.getElementById('term');
+    const PROMPT = '<span class="prompt"><span class="path">~/taranagarwal</span> $</span> ';
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const seq = [
+      { cmd: 'cat about.txt', lines: [
+        '<span class="name">Taran Agarwal</span>',
+        '<span class="role">Software Engineer <span class="at">@</span> <img class="abridge-word" src="assets/abridge-wordmark.svg" alt="Abridge"></span>'
+      ] },
+      { cmd: 'ls ~/links', cards: true },
+    ];
+
+    const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function line(html) {
+      const d = document.createElement('div');
+      d.className = 'ln';
+      d.innerHTML = html;
+      term.appendChild(d);
+      return d;
+    }
+
+    async function typeCmd(text) {
+      const d = line(PROMPT + '<span class="cmd"></span>');
+      const span = d.querySelector('.cmd');
+      for (const ch of text) { span.textContent += ch; await wait(38 + Math.random()*45); }
+    }
+
+    // reveal an output block one line at a time
+    async function typeOut(htmlLines, instant) {
+      const block = document.createElement('div');
+      block.className = 'out';
+      term.appendChild(block);
+      for (const html of htmlLines) {
+        const l = document.createElement('div');
+        l.className = 'oline';
+        l.innerHTML = html;
+        block.appendChild(l);
+        if (instant) { l.classList.add('show'); continue; }
+        requestAnimationFrame(() => l.classList.add('show'));
+        await wait(190);
+      }
+    }
+
+    // reveal the ls output links one line at a time
+    async function revealLinks(instant) {
+      const tpl = document.getElementById('links-tpl').content.cloneNode(true);
+      term.appendChild(tpl);
+      const items = term.querySelectorAll('.links .link');
+      for (const it of items) {
+        if (instant) { it.classList.add('show'); continue; }
+        requestAnimationFrame(() => it.classList.add('show'));
+        await wait(130);
+      }
+    }
+
+    function finalPrompt() {
+      line(PROMPT + '<span class="cursor"></span>');
+    }
+
+    async function run() {
+      if (reduce) {
+        for (const s of seq) {
+          line(PROMPT + '<span class="cmd">' + s.cmd + '</span>');
+          if (s.lines) await typeOut(s.lines, true);
+          if (s.cards) await revealLinks(true);
+        }
+        finalPrompt();
+        return;
+      }
+      await wait(450);
+      for (const s of seq) {
+        await typeCmd(s.cmd);
+        await wait(230);
+        if (s.lines) { await typeOut(s.lines); await wait(230); }
+        if (s.cards) { await revealLinks(); await wait(160); }
+      }
+      finalPrompt();
+    }
+    run();
+
+    // nav border on scroll
+    const nav = document.getElementById('nav');
+    addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 20));
+
+    // live terminal dimensions (cols × rows), like Apple Terminal
+    function updateDims() {
+      const probe = document.createElement('span');
+      probe.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;font-family:var(--mono);font-size:15px;';
+      probe.textContent = '0'.repeat(40);
+      term.appendChild(probe);
+      const charW = probe.getBoundingClientRect().width / 40;
+      probe.remove();
+      const lineH = 15 * 1.6;
+      // term-body padding: 24 L/R, 24 T + 22 B
+      const cols = Math.max(20, Math.round((term.clientWidth - 48) / charW));
+      const rows = Math.max(8, Math.round((term.clientHeight - 46) / lineH));
+      const el = document.getElementById('dims');
+      if (el) el.textContent = cols + '×' + rows;
+    }
+    updateDims();
+    addEventListener('resize', updateDims);
+  </script>
 </body>
 </html>
