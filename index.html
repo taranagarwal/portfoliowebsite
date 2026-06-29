@@ -38,6 +38,7 @@
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     min-height: 100vh;
+    display: flex; flex-direction: column;
     overflow-x: hidden;
   }
 
@@ -84,16 +85,16 @@
 
   /* ---------- layout ---------- */
   main {
-    min-height: 100vh;
+    flex: 1;
     display:flex; align-items:center; justify-content:center;
-    padding: 110px 28px 60px;
+    padding: 90px 28px 70px;
   }
   .stage { width: 100%; max-width: 720px; }
 
   /* ---------- glass terminal ---------- */
   .terminal {
     display: flex; flex-direction: column;
-    height: clamp(380px, 64vh, 560px);
+    height: clamp(425px, 64vh, 560px);
     border-radius: 16px;
     border: 1px solid var(--line);
     background: var(--glass);
@@ -170,7 +171,7 @@
   .link:hover .arrow { opacity:1; transform:none; color: var(--teal); }
 
   footer {
-    text-align:center; padding: 30px; color: var(--ink-faint); font-size:12px;
+    text-align:center; padding: 18px; color: var(--ink-faint); font-size:12px;
   }
 
   @media (max-width:560px) {
