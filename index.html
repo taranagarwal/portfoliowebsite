@@ -14,7 +14,7 @@
 <meta property="og:description" content="Software Engineer at Abridge." />
 <meta property="og:url" content="https://taranagarwal.com/" />
 <!-- Favicon: terminal prompt mark -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2307080a'/%3E%3Ctext x='20' y='66' font-family='SFMono-Regular,Menlo,monospace' font-size='46' font-weight='700' fill='%2338e8c6'%3E%26gt;%3C/text%3E%3Crect x='52' y='40' width='26' height='8' rx='2' fill='%23e8e9ee'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2307080a'/%3E%3Ctext x='20' y='66' font-family='SFMono-Regular,Menlo,monospace' font-size='46' font-weight='700' fill='%23f5945f'%3E%26gt;%3C/text%3E%3Crect x='52' y='40' width='26' height='8' rx='2' fill='%23e8e9ee'/%3E%3C/svg%3E" />
 <style>
   :root {
     --bg: #07080a;
@@ -23,8 +23,8 @@
     --ink-faint: #5a5c66;
     --line: rgba(255,255,255,0.09);
     --green: #4ee6a8;
-    --teal: #38e8c6;
-    --indigo: #7b86ff;
+    --teal: #f5945f;   /* soft orange: prompt $, cursor, hover */
+    --indigo: #7faede; /* cool path color */
     --glass: rgba(20,22,28,0.55);
     --ease: cubic-bezier(0.16,1,0.3,1);
     --mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, Menlo, monospace;
@@ -52,10 +52,10 @@
   }
   .bg-glow {
     position: fixed; z-index: -2;
-    width: 70vw; height: 70vw;
-    top: -25%; left: 50%; transform: translateX(-50%);
-    background: radial-gradient(circle, rgba(80,90,200,0.16) 0%, rgba(56,232,198,0.06) 40%, transparent 70%);
-    filter: blur(40px);
+    width: 110vw; height: 70vh;
+    top: -20%; left: 50%; transform: translateX(-50%);
+    background: radial-gradient(ellipse 55% 55% at 50% 45%, rgba(45,120,225,0.17) 0%, rgba(90,155,240,0.06) 45%, transparent 80%);
+    filter: blur(80px);
     pointer-events: none;
   }
   .grain {
