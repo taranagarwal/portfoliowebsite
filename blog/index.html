@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Blog — Taran Agarwal</title>
+<meta name="description" content="Writing by Taran Agarwal — software engineering, systems, and applied AI." />
+<meta name="author" content="Taran Agarwal" />
+<meta name="theme-color" content="#07080a" />
+<link rel="canonical" href="https://taranagarwal.com/blog" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Blog — Taran Agarwal" />
+<meta property="og:description" content="Writing on software engineering, systems, and applied AI." />
+<meta property="og:url" content="https://taranagarwal.com/blog" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2307080a'/%3E%3Ctext x='20' y='66' font-family='SFMono-Regular,Menlo,monospace' font-size='46' font-weight='700' fill='%23f5945f'%3E%26gt;%3C/text%3E%3Crect x='52' y='40' width='26' height='8' rx='2' fill='%237faede'/%3E%3C/svg%3E" />
+<style>
+  :root {
+    --bg:#07080a; --ink:#e8e9ee; --ink-dim:#9a9ca6; --ink-faint:#5a5c66;
+    --line:rgba(255,255,255,0.09); --orange:#f5945f; --blue:#7faede;
+    --glass:rgba(20,22,28,0.55); --ease:cubic-bezier(0.16,1,0.3,1);
+    --mono:"SF Mono","JetBrains Mono","Fira Code",ui-monospace,Menlo,monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { background:var(--bg); color:var(--ink); font-family:var(--mono); line-height:1.6;
+    -webkit-font-smoothing:antialiased; min-height:100vh; display:flex; flex-direction:column; overflow-x:hidden; }
+  .bg-grid { position:fixed; inset:0; z-index:-3;
+    background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);
+    background-size:46px 46px; mask-image:radial-gradient(ellipse 80% 60% at 50% 30%,#000 30%,transparent 100%); }
+  .bg-glow { position:fixed; z-index:-2; width:110vw; height:70vh; top:-20%; left:50%; transform:translateX(-50%);
+    background:radial-gradient(ellipse 55% 55% at 50% 45%,rgba(45,120,225,0.17) 0%,rgba(90,155,240,0.06) 45%,transparent 80%); filter:blur(80px); }
+  .grain { position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:0.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+  main { flex:1; display:flex; align-items:flex-start; justify-content:center; padding:70px 28px 60px; }
+  .stage { width:100%; max-width:820px; }
+  .terminal { display:flex; flex-direction:column; min-height:480px;
+    border-radius:16px; border:1px solid var(--line); background:var(--glass);
+    backdrop-filter:blur(22px) saturate(140%);
+    box-shadow:0 1px 0 rgba(255,255,255,0.06) inset,0 40px 80px -30px rgba(0,0,0,0.8),0 0 0 1px rgba(0,0,0,0.3);
+    overflow:hidden; opacity:0; transform:translateY(16px) scale(0.995); animation:bootUp .8s var(--ease) forwards; }
+  @keyframes bootUp { to { opacity:1; transform:none; } }
+  .term-bar { display:flex; align-items:center; padding:11px 16px; border-bottom:1px solid var(--line); background:rgba(255,255,255,0.025); flex-shrink:0; }
+  .dots { display:flex; gap:8px; } .dot { width:12px; height:12px; border-radius:50%; }
+  .dot.r{background:#ff5f57;}.dot.y{background:#febc2e;}.dot.g{background:#28c840;}
+  .term-title { margin-left:18px; display:inline-flex; align-items:center; gap:7px; color:var(--ink-faint); font-size:13px; }
+  .term-title .folder { width:16px; height:16px; }
+  .term-body { flex:1; padding:28px 30px 30px; font-size:16px; }
+
+  .prompt { color:var(--orange); } .prompt .path { color:var(--blue); } .cmd { color:var(--ink); }
+  .line { margin-bottom:8px; }
+  .blink { background:var(--orange); display:inline-block; width:9px; height:18px; vertical-align:-3px; animation:blink 1.05s steps(1) infinite; }
+  @keyframes blink { 50% { opacity:0; } }
+
+  .posts { list-style:none; margin:16px 0 18px; }
+  .post { display:block; text-decoration:none; padding:16px; margin:0 -16px; border-radius:10px;
+    border:1px solid transparent; transition:background .25s, border-color .25s; }
+  .post:hover { background:rgba(255,255,255,0.03); border-color:var(--line); }
+  .post-top { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .post .fileicon { color:var(--ink-faint); }
+  .post .title { color:var(--ink); font-size:17px; }
+  .post:hover .title { color:var(--orange); }
+  .post .arrow { color:var(--ink-faint); opacity:0; transform:translateX(-4px); transition:.25s var(--ease); margin-left:auto; }
+  .post:hover .arrow { opacity:1; transform:none; color:var(--orange); }
+  .post-meta { display:flex; gap:14px; margin-top:7px; color:var(--ink-faint); font-size:13px; flex-wrap:wrap; }
+  .post-meta .tag { color:var(--blue); } .post-meta .date { color:var(--ink-dim); }
+  .empty { color:var(--ink-faint); margin:18px 0; }
+
+  .foot { display:flex; gap:18px; margin-top:8px; }
+  .foot a { color:var(--ink-dim); text-decoration:none; font-size:14px; }
+  .foot a:hover { color:var(--orange); }
+  .footnote { text-align:center; color:var(--ink-faint); font-size:12px; margin-top:18px; }
+  @media (max-width:560px){ .term-body{ padding:22px 20px; } .post .arrow{ display:none; } }
+</style>
+</head>
+<body>
+  <div class="bg-grid"></div><div class="bg-glow"></div><div class="grain"></div>
+  <main>
+    <div class="stage">
+      <div class="terminal">
+        <div class="term-bar">
+          <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+          <span class="term-title">
+            <svg class="folder" viewBox="0 0 24 24" fill="none"><path d="M3 7.5a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.4.6l1 1a2 2 0 0 0 1.4.6H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5z" fill="#3a92f0"/><path d="M3 10.2h18V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6.8z" fill="#62b0ff"/></svg>
+            taranagarwal — -zsh — blog
+          </span>
+        </div>
+        <div class="term-body">
+          <div class="line"><span class="prompt"><span class="path">~/taranagarwal/blog</span> $</span> <span class="cmd">ls -t posts/</span></div>
+          <ul class="posts" id="posts"></ul>
+          <div class="line"><span class="prompt"><span class="path">~/taranagarwal/blog</span> $</span> <span class="blink"></span></div>
+          <div class="foot"><a href="/">← cd ~ (home)</a></div>
+        </div>
+      </div>
+      <div class="footnote">taranagarwal.com/blog</div>
+    </div>
+  </main>
+  <script>
+    function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    fetch('/blog/posts.json', { cache:'no-store' })
+      .then(r => r.ok ? r.json() : [])
+      .then(posts => {
+        const ul = document.getElementById('posts');
+        if (!Array.isArray(posts) || posts.length === 0) {
+          ul.innerHTML = '<li class="empty"># no posts yet — check back soon</li>';
+          return;
+        }
+        posts.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+        ul.innerHTML = posts.map(p => {
+          const tags = (p.tags||[]).map(t => '<span class="tag">#'+esc(t)+'</span>').join(' ');
+          const rt = p.readingTime ? '<span>· '+p.readingTime+' min</span>' : '';
+          return '<li><a class="post" href="/blog/'+esc(p.slug)+'">'
+            + '<div class="post-top"><span class="fileicon">▸</span><span class="title">'+esc(p.title)+'</span><span class="arrow">↗</span></div>'
+            + '<div class="post-meta"><span class="date">'+esc(p.date||'')+'</span>'+tags+rt+'</div></a></li>';
+        }).join('');
+      })
+      .catch(() => { document.getElementById('posts').innerHTML = '<li class="empty"># could not load posts</li>'; });
+  </script>
+</body>
+</html>

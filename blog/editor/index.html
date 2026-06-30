@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Blog Editor — Taran Agarwal</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2307080a'/%3E%3Ctext x='20' y='66' font-family='SFMono-Regular,Menlo,monospace' font-size='46' font-weight='700' fill='%23f5945f'%3E%26gt;%3C/text%3E%3Crect x='52' y='40' width='26' height='8' rx='2' fill='%237faede'/%3E%3C/svg%3E" />
+<style>
+  :root {
+    --bg:#07080a; --ink:#e8e9ee; --ink-dim:#9a9ca6; --ink-faint:#5a5c66;
+    --line:rgba(255,255,255,0.09); --orange:#f5945f; --blue:#7faede; --green:#4ee6a8;
+    --glass:rgba(20,22,28,0.6); --ease:cubic-bezier(0.16,1,0.3,1);
+    --mono:"SF Mono","JetBrains Mono","Fira Code",ui-monospace,Menlo,monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--ink); font-family:var(--mono); -webkit-font-smoothing:antialiased; min-height:100vh; }
+  .bg-grid { position:fixed; inset:0; z-index:-3;
+    background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);
+    background-size:46px 46px; mask-image:radial-gradient(ellipse 80% 60% at 50% 20%,#000 30%,transparent 100%); }
+  .bg-glow { position:fixed; z-index:-2; width:110vw; height:60vh; top:-15%; left:50%; transform:translateX(-50%);
+    background:radial-gradient(ellipse 55% 55% at 50% 45%,rgba(45,120,225,0.15) 0%,rgba(90,155,240,0.05) 45%,transparent 80%); filter:blur(80px); }
+
+  main { padding:36px 24px; max-width:1240px; margin:0 auto; }
+  .terminal { border-radius:16px; border:1px solid var(--line); background:var(--glass);
+    backdrop-filter:blur(22px) saturate(140%); box-shadow:0 1px 0 rgba(255,255,255,0.06) inset,0 40px 80px -30px rgba(0,0,0,0.8); overflow:hidden; }
+  .term-bar { display:flex; align-items:center; padding:11px 16px; border-bottom:1px solid var(--line); background:rgba(255,255,255,0.025); }
+  .dots { display:flex; gap:8px; } .dot { width:12px; height:12px; border-radius:50%; }
+  .dot.r{background:#ff5f57;}.dot.y{background:#febc2e;}.dot.g{background:#28c840;}
+  .term-title { margin-left:18px; color:var(--ink-faint); font-size:13px; display:inline-flex; align-items:center; gap:7px; }
+  .term-title .badge { color:var(--green); } .term-title .folder { width:16px; height:16px; }
+
+  .statusbar { display:flex; align-items:center; gap:8px; padding:8px 16px; background:rgba(0,0,0,0.25); border-bottom:1px solid var(--line); font-size:12.5px; color:var(--ink-dim); }
+  .statusbar .ok { color:var(--green); } .statusbar .spacer{ flex:1; }
+  .statusbar a { color:var(--blue); text-decoration:none; cursor:pointer; }
+  .statusbar .msg { color:var(--orange); }
+
+  .editor { display:grid; grid-template-columns:200px 1fr 360px; min-height:620px; }
+  .editor.nomd { grid-template-columns:200px 1fr; }
+  .editor.nomd .mdpane { display:none; }
+  .sidebar { border-right:1px solid var(--line); padding:18px 14px; }
+  .side-h { color:var(--ink-faint); font-size:12px; text-transform:uppercase; letter-spacing:.1em; margin:4px 6px 12px; }
+  .side-post { padding:9px 10px; border-radius:8px; color:var(--ink-dim); font-size:13.5px; cursor:pointer; display:flex; gap:8px; align-items:center; }
+  .side-post:hover { background:rgba(255,255,255,0.04); color:var(--ink); }
+  .side-post.active { background:rgba(245,148,95,0.12); color:var(--orange); }
+  .side-post .st { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .st.pub { background:var(--green); } .st.draft { background:var(--ink-faint); }
+  .newbtn { margin:14px 6px 0; width:calc(100% - 12px); padding:9px; border:1px dashed var(--line); background:transparent; color:var(--ink-dim); border-radius:8px; cursor:pointer; font-family:var(--mono); font-size:13px; }
+  .newbtn:hover { border-color:var(--orange); color:var(--orange); }
+
+  .compose { border-right:1px solid var(--line); display:flex; flex-direction:column; min-width:0; }
+  .fields { padding:16px 18px; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:10px; }
+  .field label { color:var(--ink-faint); font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; display:block; margin-bottom:5px; }
+  .field input { width:100%; background:rgba(0,0,0,0.25); border:1px solid var(--line); border-radius:7px; padding:9px 11px; color:var(--ink); font-family:var(--mono); font-size:14px; }
+  .field input:focus { outline:none; border-color:var(--orange); }
+  .field .slug { color:var(--blue); font-size:12.5px; margin-top:5px; }
+  .row { display:flex; gap:10px; } .row .field { flex:1; }
+
+  .fmtbar { display:flex; align-items:center; gap:4px; padding:8px 12px; border-bottom:1px solid var(--line); background:rgba(0,0,0,0.2); flex-wrap:wrap; }
+  .fmtbar button { font-family:var(--mono); font-size:13px; color:var(--ink-dim); background:transparent; border:1px solid transparent; border-radius:6px; padding:6px 9px; cursor:pointer; min-width:30px; }
+  .fmtbar button:hover { background:rgba(255,255,255,0.06); color:var(--ink); }
+  .fmtbar .sep { width:1px; height:18px; background:var(--line); margin:0 4px; }
+  .fmtbar .imgbtn { color:var(--orange); }
+
+  .wysiwyg { flex:1; overflow:auto; padding:24px 28px; outline:none; font-size:15.5px; line-height:1.7; }
+  .wysiwyg:empty:before { content:attr(data-ph); color:var(--ink-faint); }
+  .wysiwyg.drop { box-shadow:inset 0 0 0 2px var(--orange); }
+  .wysiwyg h1 { font-size:27px; color:var(--ink); margin:6px 0 8px; line-height:1.2; }
+  .wysiwyg h2 { color:var(--orange); font-size:19px; margin:24px 0 10px; }
+  .wysiwyg h3 { color:var(--ink); font-size:16px; margin:18px 0 8px; }
+  .wysiwyg p { color:var(--ink-dim); margin-bottom:14px; }
+  .wysiwyg strong { color:var(--ink); } .wysiwyg em { color:var(--ink); }
+  .wysiwyg a { color:var(--blue); }
+  .wysiwyg blockquote { border-left:2px solid var(--orange); padding-left:14px; color:var(--ink-dim); font-style:italic; margin:0 0 14px; }
+  .wysiwyg ul { color:var(--ink-dim); margin:0 0 14px 22px; }
+  .wysiwyg pre { background:rgba(0,0,0,0.35); border:1px solid var(--line); border-radius:9px; padding:14px; font-size:13.5px; overflow-x:auto; margin-bottom:14px; color:var(--blue); white-space:pre-wrap; }
+  .wysiwyg img { max-width:100%; border-radius:10px; border:1px solid var(--line); margin:6px 0 14px; display:block; }
+
+  .toolbar { display:flex; align-items:center; gap:8px; padding:10px 14px; border-top:1px solid var(--line); background:rgba(0,0,0,0.2); }
+  .toolbar .spacer { flex:1; }
+  .btn { font-family:var(--mono); font-size:13px; padding:8px 14px; border-radius:8px; cursor:pointer; border:1px solid var(--line); background:transparent; color:var(--ink-dim); }
+  .btn:hover { color:var(--ink); border-color:rgba(255,255,255,0.25); }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .btn.primary { background:var(--orange); color:#1a1206; border-color:transparent; font-weight:600; }
+  .btn.primary:hover { filter:brightness(1.08); }
+  .btn.danger:hover { color:#ff6b6b; border-color:#ff6b6b55; }
+  .btn.toggle { font-size:12px; }
+
+  .mdpane { background:rgba(0,0,0,0.22); display:flex; flex-direction:column; }
+  .mdpane .ph { color:var(--ink-faint); font-size:11.5px; text-transform:uppercase; letter-spacing:.1em; padding:14px 18px 0; display:flex; align-items:center; gap:8px; }
+  .mdpane .ph .dotg { width:6px; height:6px; border-radius:50%; background:var(--green); }
+  .mdpane pre { flex:1; overflow:auto; padding:14px 18px 18px; color:var(--ink-dim); font-size:12.5px; line-height:1.65; white-space:pre-wrap; word-break:break-word; }
+  .mdpane .h { color:var(--orange); } .mdpane .img { color:var(--blue); }
+
+  .gate { position:fixed; inset:0; z-index:50; background:rgba(5,6,8,0.85); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; }
+  .gate.hidden { display:none; }
+  .gate-card { width:480px; max-width:92vw; border:1px solid var(--line); border-radius:14px; background:var(--glass); backdrop-filter:blur(22px); overflow:hidden; }
+  .gate-body { padding:26px; }
+  .gate .lockln { color:var(--orange); font-size:14px; margin-bottom:6px; }
+  .gate h2 { font-size:18px; margin-bottom:8px; }
+  .gate p { color:var(--ink-dim); font-size:13.5px; margin-bottom:18px; line-height:1.6; }
+  .gate input { width:100%; background:rgba(0,0,0,0.3); border:1px solid var(--line); border-radius:8px; padding:11px 12px; color:var(--ink); font-family:var(--mono); font-size:13px; margin-bottom:14px; }
+  .gate input:focus { outline:none; border-color:var(--orange); }
+  .gate .hint { color:var(--ink-faint); font-size:12px; margin-top:14px; line-height:1.6; }
+  .gate .err { color:#ff6b6b; font-size:12.5px; margin-top:10px; min-height:16px; }
+  .gate a { color:var(--blue); }
+  @media (max-width:980px){ .editor,.editor.nomd{ grid-template-columns:1fr; } .compose,.sidebar{ border-right:none; border-bottom:1px solid var(--line);} .mdpane{ display:none; } }
+</style>
+</head>
+<body>
+  <div class="bg-grid"></div><div class="bg-glow"></div>
+
+  <div class="gate" id="gate">
+    <div class="gate-card">
+      <div class="term-bar"><div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+        <span class="term-title">auth — required</span></div>
+      <div class="gate-body">
+        <div class="lockln">$ sudo unlock editor</div>
+        <h2>Owner access</h2>
+        <p>Paste a GitHub token to enable publishing. It's stored only in this browser (localStorage), never committed. Without it the editor can't write to the repo.</p>
+        <input type="password" placeholder="github_pat_••••••••••••••••••••" id="tok" />
+        <button class="btn primary" style="width:100%" id="unlockBtn">Unlock editor →</button>
+        <div class="err" id="gateErr"></div>
+        <div class="hint">Create a <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">fine-grained PAT</a> · Repository access: <b>taranagarwal/portfoliowebsite</b> only · Permissions: <b>Contents → Read &amp; write</b>.</div>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <div class="terminal">
+      <div class="term-bar">
+        <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+        <span class="term-title">
+          <svg class="folder" viewBox="0 0 24 24" fill="none"><path d="M3 7.5a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.4.6l1 1a2 2 0 0 0 1.4.6H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5z" fill="#3a92f0"/><path d="M3 10.2h18V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6.8z" fill="#62b0ff"/></svg>
+          taranagarwal — editor — <span class="badge" id="filebadge">blog/new-post.md</span>
+        </span>
+      </div>
+      <div class="statusbar">
+        <span class="ok">●</span> <span id="who">unlocked</span>
+        <span class="msg" id="status"></span>
+        <span class="spacer"></span><a id="viewBlog" href="/blog" target="_blank">view blog ↗</a> · <a id="lockBtn">sign out</a>
+      </div>
+
+      <div class="editor" id="editor">
+        <div class="sidebar">
+          <div class="side-h">Posts</div>
+          <div id="postList"></div>
+          <button class="newbtn" id="newBtn">+ new post</button>
+        </div>
+
+        <div class="compose">
+          <div class="fields">
+            <div class="field">
+              <label>Title</label>
+              <input value="" id="t" placeholder="Post title" />
+              <div class="slug" id="slugline">slug: /blog/…</div>
+            </div>
+            <div class="row">
+              <div class="field"><label>Tags (comma-separated)</label><input value="" id="tags" placeholder="systems, latency" /></div>
+              <div class="field"><label>Date</label><input value="" id="date" placeholder="2026-06-30" /></div>
+            </div>
+          </div>
+
+          <div class="fmtbar">
+            <button onmousedown="return false" onclick="fmt('formatBlock','h2')" title="Heading">H2</button>
+            <button onmousedown="return false" onclick="fmt('formatBlock','h3')" title="Subheading">H3</button>
+            <button onmousedown="return false" onclick="fmt('bold')" title="Bold"><b>B</b></button>
+            <button onmousedown="return false" onclick="fmt('italic')" title="Italic"><i>i</i></button>
+            <span class="sep"></span>
+            <button onmousedown="return false" onclick="fmt('insertUnorderedList')" title="List">•</button>
+            <button onmousedown="return false" onclick="fmt('formatBlock','blockquote')" title="Quote">&ldquo;</button>
+            <button onmousedown="return false" onclick="fmt('formatBlock','pre')" title="Code block">&lt;/&gt;</button>
+            <button onmousedown="return false" onclick="addLink()" title="Link">🔗</button>
+            <span class="sep"></span>
+            <button class="imgbtn" onmousedown="return false" onclick="pickImg()" title="Insert image">⛰ Image</button>
+            <input type="file" accept="image/*" id="imgInput" style="display:none" />
+          </div>
+
+          <div class="wysiwyg" id="wy" contenteditable="true" data-ph="Write your post… drag an image in anywhere" oninput="sync()"></div>
+
+          <div class="toolbar">
+            <button class="btn toggle" id="mdToggle">⇄ markdown</button>
+            <span class="spacer"></span>
+            <button class="btn danger" id="deleteBtn" disabled>Delete</button>
+            <button class="btn primary" id="publishBtn">⌁ Publish</button>
+          </div>
+        </div>
+
+        <div class="mdpane">
+          <div class="ph"><span class="dotg"></span> markdown output (committed to repo)</div>
+          <pre id="md"></pre>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+  (function(){
+    const OWNER='taranagarwal', REPO='portfoliowebsite', BRANCH='main';
+    const API='https://api.github.com';
+    let TOKEN = localStorage.getItem('gh_token') || '';
+    let manifest = [];                 // posts.json contents
+    let currentSlug = null;            // slug being edited (null = new)
+    const pendingImages = new Map();   // repoPath -> File (new uploads this session)
+
+    const $ = id => document.getElementById(id);
+    const wy = $('wy');
+
+    function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    function escAttr(s){ return esc(s).replace(/'/g,'&#39;'); }
+    function slugify(s){ return String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60) || 'untitled'; }
+    function today(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+    function utf8ToB64(str){ const b=new TextEncoder().encode(str); let s=''; b.forEach(x=>s+=String.fromCharCode(x)); return btoa(s); }
+    function fileToB64(file){ return new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result.split(',')[1]); fr.readAsDataURL(file); }); }
+    function status(m, color){ const el=$('status'); el.textContent = m||''; el.style.color = color||'var(--orange)'; }
+
+    /* ---------- editing ---------- */
+    function fmt(cmd,val){ document.execCommand(cmd,false,val||null); wy.focus(); sync(); }
+    function addLink(){ const u=prompt('Link URL:','https://'); if(u) document.execCommand('createLink',false,u); sync(); }
+    function pickImg(){ $('imgInput').click(); }
+    function insertImg(file){
+      const name = slugify(file.name.replace(/\.[^.]+$/,'')) + '-' + Date.now().toString(36) + (file.name.match(/\.[^.]+$/)||['.png'])[0].toLowerCase();
+      const repoPath = 'assets/blog/' + name;
+      pendingImages.set(repoPath, file);
+      const url = URL.createObjectURL(file);
+      const img = document.createElement('img');
+      img.src = url; img.dataset.path = '/' + repoPath; img.alt = '';
+      wy.appendChild(img); wy.appendChild(document.createElement('p'));
+      sync();
+    }
+    $('imgInput').addEventListener('change', e => { if(e.target.files[0]) insertImg(e.target.files[0]); e.target.value=''; });
+    wy.addEventListener('dragover', e => { e.preventDefault(); wy.classList.add('drop'); });
+    wy.addEventListener('dragleave', () => wy.classList.remove('drop'));
+    wy.addEventListener('drop', e => { e.preventDefault(); wy.classList.remove('drop');
+      [...e.dataTransfer.files].filter(f=>f.type.startsWith('image/')).forEach(insertImg); });
+    window.fmt = fmt; window.addLink = addLink; window.pickImg = pickImg; window.sync = sync;
+
+    /* ---------- HTML <-> Markdown ---------- */
+    function inlineMd(node){
+      let s='';
+      node.childNodes.forEach(n=>{
+        if(n.nodeType===3) s+=n.textContent;
+        else if(/^(STRONG|B)$/.test(n.nodeName)) s+='**'+inlineMd(n)+'**';
+        else if(/^(EM|I)$/.test(n.nodeName)) s+='*'+inlineMd(n)+'*';
+        else if(n.nodeName==='CODE') s+='`'+n.textContent+'`';
+        else if(n.nodeName==='A') s+='['+inlineMd(n)+']('+n.getAttribute('href')+')';
+        else if(n.nodeName==='IMG') s+='!['+(n.alt||'')+']('+(n.getAttribute('data-path')||n.src)+')';
+        else if(n.nodeName==='BR') s+='\n';
+        else s+=inlineMd(n);
+      });
+      return s;
+    }
+    function blockMd(node){
+      if(node.nodeType===3) return node.textContent.trim();
+      switch(node.nodeName){
+        case 'H1': return '# '+inlineMd(node);
+        case 'H2': return '## '+inlineMd(node);
+        case 'H3': return '### '+inlineMd(node);
+        case 'BLOCKQUOTE': return '> '+inlineMd(node);
+        case 'PRE': return '```\n'+node.textContent.replace(/\n+$/,'')+'\n```';
+        case 'UL': return [...node.children].map(li=>'- '+inlineMd(li)).join('\n');
+        case 'OL': return [...node.children].map((li,i)=>(i+1)+'. '+inlineMd(li)).join('\n');
+        case 'IMG': return '!['+(node.alt||'')+']('+(node.getAttribute('data-path')||node.src)+')';
+        default: return inlineMd(node);
+      }
+    }
+    function bodyToMarkdown(){
+      return [...wy.childNodes].map(blockMd).map(s=>s.trim()).filter(Boolean).join('\n\n');
+    }
+    function markdownToHtml(src){
+      src = src.replace(/\r/g,'').replace(/^---\n[\s\S]*?\n---\n?/,'');
+      const lines = src.split('\n'); let out=''; let i=0;
+      const inline = t => esc(t)
+        .replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img alt="$1" src="$2" data-path="$2">')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2">$1</a>')
+        .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g,'<em>$1</em>')
+        .replace(/`([^`]+)`/g,'<code>$1</code>');
+      while(i<lines.length){
+        const l=lines[i];
+        if(/^```/.test(l)){ const c=[]; i++; while(i<lines.length && !/^```/.test(lines[i])){ c.push(lines[i]); i++; } i++; out+='<pre>'+esc(c.join('\n'))+'</pre>'; continue; }
+        if(/^###\s/.test(l)){ out+='<h3>'+inline(l.slice(4))+'</h3>'; i++; continue; }
+        if(/^##\s/.test(l)){ out+='<h2>'+inline(l.slice(3))+'</h2>'; i++; continue; }
+        if(/^#\s/.test(l)){ out+='<h1>'+inline(l.slice(2))+'</h1>'; i++; continue; }
+        if(/^>\s?/.test(l)){ const q=[]; while(i<lines.length && /^>\s?/.test(lines[i])){ q.push(lines[i].replace(/^>\s?/,'')); i++; } out+='<blockquote>'+inline(q.join(' '))+'</blockquote>'; continue; }
+        if(/^[-*]\s/.test(l)){ const it=[]; while(i<lines.length && /^[-*]\s/.test(lines[i])){ it.push('<li>'+inline(lines[i].replace(/^[-*]\s/,''))+'</li>'); i++; } out+='<ul>'+it.join('')+'</ul>'; continue; }
+        if(l.trim()===''){ i++; continue; }
+        const p=[l]; i++;
+        while(i<lines.length && lines[i].trim()!=='' && !/^(#|>|```|[-*]\s)/.test(lines[i])){ p.push(lines[i]); i++; }
+        out+='<p>'+inline(p.join(' '))+'</p>';
+      }
+      return out;
+    }
+
+    /* ---------- preview sync ---------- */
+    function sync(){
+      const title = $('t').value || 'Untitled';
+      const slug = currentSlug || slugify(title);
+      $('slugline').textContent = 'slug: /blog/' + slug;
+      const tags = $('tags').value.split(',').map(s=>s.trim()).filter(Boolean);
+      const date = $('date').value || today();
+      const front = '---\ntitle: '+title+'\ndate: '+date+'\ntags: ['+tags.join(', ')+']\n---\n\n';
+      const mdFull = front + bodyToMarkdown();
+      $('md').innerHTML = mdFull.split('\n').map(l=>{
+        if(/^#{1,3}\s/.test(l)) return '<span class="h">'+esc(l)+'</span>';
+        if(/^!\[/.test(l)) return '<span class="img">'+esc(l)+'</span>';
+        return esc(l);
+      }).join('\n');
+    }
+    ['t','tags','date'].forEach(id => $(id).addEventListener('input', sync));
+
+    /* ---------- reading time & excerpt ---------- */
+    function readingTime(){ const words = wy.innerText.trim().split(/\s+/).filter(Boolean).length; return Math.max(1, Math.round(words/200)); }
+    function excerpt(){ return wy.innerText.replace(/\s+/g,' ').trim().slice(0,160); }
+
+    /* ---------- pre-rendered post page ---------- */
+    const POST_CSS = `:root{--bg:#07080a;--ink:#e8e9ee;--ink-dim:#9a9ca6;--ink-faint:#5a5c66;--line:rgba(255,255,255,0.09);--orange:#f5945f;--blue:#7faede;--glass:rgba(20,22,28,0.55);--mono:"SF Mono","JetBrains Mono","Fira Code",ui-monospace,Menlo,monospace}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--ink);font-family:var(--mono);line-height:1.7;-webkit-font-smoothing:antialiased;min-height:100vh}.bg-grid{position:fixed;inset:0;z-index:-3;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:46px 46px;mask-image:radial-gradient(ellipse 80% 60% at 50% 20%,#000 30%,transparent 100%)}.bg-glow{position:fixed;z-index:-2;width:110vw;height:60vh;top:-15%;left:50%;transform:translateX(-50%);background:radial-gradient(ellipse 55% 55% at 50% 45%,rgba(45,120,225,.15) 0%,rgba(90,155,240,.05) 45%,transparent 80%);filter:blur(80px)}main{display:flex;justify-content:center;padding:60px 24px 80px}.stage{width:100%;max-width:760px}.terminal{border-radius:16px;border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(22px) saturate(140%);box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 40px 80px -30px rgba(0,0,0,.8);overflow:hidden}.term-bar{display:flex;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.025)}.dots{display:flex;gap:8px}.dot{width:12px;height:12px;border-radius:50%}.dot.r{background:#ff5f57}.dot.y{background:#febc2e}.dot.g{background:#28c840}.term-title{margin-left:18px;color:var(--ink-faint);font-size:13px;display:inline-flex;align-items:center;gap:7px}.folder{width:16px;height:16px}.term-body{padding:30px 34px 40px}.backlink{display:inline-flex;gap:8px;color:var(--ink-dim);text-decoration:none;font-size:14px}.backlink:hover{color:var(--orange)}.article{margin-top:22px}.article h1{font-size:30px;font-weight:600;letter-spacing:-.01em;color:var(--ink);margin-bottom:10px;line-height:1.2}.submeta{color:var(--ink-faint);font-size:13px;margin-bottom:28px;display:flex;gap:14px;flex-wrap:wrap}.submeta .tags{color:var(--blue)}.article h2{font-size:20px;color:var(--orange);margin:30px 0 12px}.article h3{font-size:16px;color:var(--ink);margin:24px 0 10px}.article p{color:var(--ink-dim);margin-bottom:16px}.article strong{color:var(--ink)}.article em{color:var(--ink)}.article a{color:var(--blue)}.article ul{color:var(--ink-dim);margin:0 0 16px 22px}.article li{margin-bottom:6px}.article blockquote{border-left:2px solid var(--orange);padding-left:16px;color:var(--ink-dim);font-style:italic;margin:0 0 16px}.article pre{background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:10px;padding:16px;overflow-x:auto;margin:0 0 18px;font-size:14px;line-height:1.7;color:var(--blue);white-space:pre-wrap}.article code{color:var(--blue)}.article img{max-width:100%;border-radius:10px;border:1px solid var(--line);margin:6px 0 18px;display:block}.foot{margin-top:34px;padding-top:20px;border-top:1px solid var(--line);display:flex;gap:18px}.foot a{color:var(--ink-dim);text-decoration:none;font-size:14px}.foot a:hover{color:var(--orange)}`;
+    const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2307080a'/%3E%3Ctext x='20' y='66' font-family='SFMono-Regular,Menlo,monospace' font-size='46' font-weight='700' fill='%23f5945f'%3E%26gt;%3C/text%3E%3Crect x='52' y='40' width='26' height='8' rx='2' fill='%237faede'/%3E%3C/svg%3E";
+    const FOLDER = `<svg class="folder" viewBox="0 0 24 24" fill="none"><path d="M3 7.5a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.4.6l1 1a2 2 0 0 0 1.4.6H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5z" fill="#3a92f0"/><path d="M3 10.2h18V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6.8z" fill="#62b0ff"/></svg>`;
+
+    function buildPostHtml(meta, bodyHtml){
+      const url = 'https://taranagarwal.com/blog/'+meta.slug;
+      const tags = (meta.tags||[]).map(t=>'#'+t).join(' ');
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${esc(meta.title)} — Taran Agarwal</title>
+<meta name="description" content="${escAttr(meta.excerpt)}" />
+<meta name="author" content="Taran Agarwal" />
+<meta name="theme-color" content="#07080a" />
+<link rel="canonical" href="${url}" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="${escAttr(meta.title)}" />
+<meta property="og:description" content="${escAttr(meta.excerpt)}" />
+<meta property="og:url" content="${url}" />
+<meta property="article:published_time" content="${meta.date}" />
+<link rel="icon" href="${FAVICON}" />
+<style>${POST_CSS}</style>
+</head>
+<body>
+  <div class="bg-grid"></div><div class="bg-glow"></div>
+  <main><div class="stage"><div class="terminal">
+    <div class="term-bar"><div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+      <span class="term-title">${FOLDER} taranagarwal — -zsh — blog/${esc(meta.slug)}</span></div>
+    <div class="term-body">
+      <a class="backlink" href="/blog">← cd ../blog</a>
+      <article class="article">
+        <h1>${esc(meta.title)}</h1>
+        <div class="submeta"><span>${esc(meta.date)}</span><span class="tags">${esc(tags)}</span><span>· ${meta.readingTime} min read</span></div>
+        ${bodyHtml}
+      </article>
+      <div class="foot"><a href="/blog">← all posts</a><a href="/">taranagarwal.com</a></div>
+    </div>
+  </div></div></main>
+</body>
+</html>`;
+    }
+
+    // produce clean body HTML for the published page (absolute image paths, no editor artifacts)
+    function publishedBodyHtml(){
+      const clone = wy.cloneNode(true);
+      clone.querySelectorAll('img').forEach(img=>{
+        const p = img.getAttribute('data-path'); if(p) img.setAttribute('src', p);
+        img.removeAttribute('data-path');
+      });
+      return clone.innerHTML.trim();
+    }
+
+    /* ---------- GitHub API ---------- */
+    async function gh(path, opts){
+      const r = await fetch(API+path, Object.assign({}, opts, {
+        headers: Object.assign({ 'Authorization':'Bearer '+TOKEN, 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' }, (opts&&opts.headers)||{})
+      }));
+      if(!r.ok){ const t = await r.text(); throw new Error('GitHub '+r.status+': '+t.slice(0,200)); }
+      return r.status===204 ? {} : r.json();
+    }
+    // files: [{path, b64}] to upsert, or {path, remove:true} to delete
+    async function commitFiles(message, files){
+      const ref = await gh(`/repos/${OWNER}/${REPO}/git/ref/heads/${BRANCH}`);
+      const baseCommit = ref.object.sha;
+      const baseTree = (await gh(`/repos/${OWNER}/${REPO}/git/commits/${baseCommit}`)).tree.sha;
+      const tree = [];
+      for(const f of files){
+        if(f.remove){ tree.push({ path:f.path, mode:'100644', type:'blob', sha:null }); continue; }
+        const blob = await gh(`/repos/${OWNER}/${REPO}/git/blobs`, { method:'POST', body: JSON.stringify({ content:f.b64, encoding:'base64' }) });
+        tree.push({ path:f.path, mode:'100644', type:'blob', sha:blob.sha });
+      }
+      const newTree = await gh(`/repos/${OWNER}/${REPO}/git/trees`, { method:'POST', body: JSON.stringify({ base_tree:baseTree, tree }) });
+      const commit = await gh(`/repos/${OWNER}/${REPO}/git/commits`, { method:'POST', body: JSON.stringify({ message, tree:newTree.sha, parents:[baseCommit] }) });
+      await gh(`/repos/${OWNER}/${REPO}/git/refs/heads/${BRANCH}`, { method:'PATCH', body: JSON.stringify({ sha:commit.sha }) });
+    }
+
+    /* ---------- manifest / sidebar ---------- */
+    async function loadManifest(){
+      try { manifest = await (await fetch('/blog/posts.json',{cache:'no-store'})).json(); if(!Array.isArray(manifest)) manifest=[]; }
+      catch { manifest = []; }
+      renderSidebar();
+    }
+    function renderSidebar(){
+      const box = $('postList');
+      manifest.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+      box.innerHTML = manifest.map(p =>
+        `<div class="side-post${p.slug===currentSlug?' active':''}" data-slug="${escAttr(p.slug)}"><span class="st pub"></span> ${esc(p.slug)}</div>`
+      ).join('') || '<div style="color:var(--ink-faint);font-size:13px;padding:6px">no posts yet</div>';
+      box.querySelectorAll('.side-post').forEach(el => el.addEventListener('click', () => loadPost(el.dataset.slug)));
+    }
+
+    function newPost(){
+      currentSlug=null; $('t').value=''; $('tags').value=''; $('date').value=today();
+      wy.innerHTML=''; pendingImages.clear(); $('filebadge').textContent='blog/new-post.md';
+      $('deleteBtn').disabled=true; renderSidebar(); sync(); $('t').focus();
+    }
+    async function loadPost(slug){
+      status('loading '+slug+'…','var(--ink-dim)');
+      try {
+        const md = await (await fetch('/blog/posts/'+slug+'.md',{cache:'no-store'})).text();
+        const fm = (md.match(/^---\n([\s\S]*?)\n---/)||[])[1] || '';
+        const meta = {};
+        fm.split('\n').forEach(line=>{ const i=line.indexOf(':'); if(i>0) meta[line.slice(0,i).trim()]=line.slice(i+1).trim(); });
+        currentSlug = slug;
+        $('t').value = meta.title || slug;
+        $('date').value = meta.date || '';
+        $('tags').value = (meta.tags||'').replace(/^\[|\]$/g,'');
+        wy.innerHTML = markdownToHtml(md);
+        pendingImages.clear();
+        $('filebadge').textContent = 'blog/'+slug+'.md';
+        $('deleteBtn').disabled=false; renderSidebar(); sync(); status('');
+      } catch(e){ status('could not load '+slug,'#ff6b6b'); }
+    }
+
+    async function publish(){
+      const title = $('t').value.trim();
+      if(!title){ status('add a title first','#ff6b6b'); return; }
+      const slug = currentSlug || slugify(title);
+      const tags = $('tags').value.split(',').map(s=>s.trim()).filter(Boolean);
+      const date = $('date').value.trim() || today();
+      const rt = readingTime();
+      const meta = { slug, title, date, tags, readingTime:rt, excerpt:excerpt() };
+      $('publishBtn').disabled=true; status('publishing…','var(--orange)');
+      try {
+        const markdown = '---\ntitle: '+title+'\ndate: '+date+'\ntags: ['+tags.join(', ')+']\nreadingTime: '+rt+'\n---\n\n'+bodyToMarkdown()+'\n';
+        const postHtml = buildPostHtml(meta, publishedBodyHtml());
+        const next = manifest.filter(p=>p.slug!==slug); next.push(meta);
+        next.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+        const files = [
+          { path:'blog/posts/'+slug+'.md', b64: utf8ToB64(markdown) },
+          { path:'blog/'+slug+'/index.html', b64: utf8ToB64(postHtml) },
+          { path:'blog/posts.json', b64: utf8ToB64(JSON.stringify(next,null,2)+'\n') },
+        ];
+        for(const [repoPath,file] of pendingImages){ files.push({ path:repoPath, b64: await fileToB64(file) }); }
+        await commitFiles('blog: publish "'+title+'"', files);
+        manifest = next; currentSlug = slug; pendingImages.clear();
+        $('deleteBtn').disabled=false; renderSidebar();
+        status('published → live in ~30–60s at /blog/'+slug,'var(--green)');
+      } catch(e){ status(e.message,'#ff6b6b'); }
+      finally { $('publishBtn').disabled=false; }
+    }
+
+    async function deletePost(){
+      if(!currentSlug) return;
+      if(!confirm('Delete "'+currentSlug+'"? This commits a removal to the repo.')) return;
+      status('deleting…','var(--orange)');
+      try {
+        const next = manifest.filter(p=>p.slug!==currentSlug);
+        await commitFiles('blog: delete '+currentSlug, [
+          { path:'blog/'+currentSlug+'/index.html', remove:true },
+          { path:'blog/posts/'+currentSlug+'.md', remove:true },
+          { path:'blog/posts.json', b64: utf8ToB64(JSON.stringify(next,null,2)+'\n') },
+        ]);
+        manifest = next; status('deleted','var(--green)'); newPost();
+      } catch(e){ status(e.message,'#ff6b6b'); }
+    }
+
+    /* ---------- auth gate ---------- */
+    async function tryUnlock(tok){
+      $('gateErr').textContent='';
+      TOKEN = tok;
+      try {
+        const me = await gh('/user');
+        localStorage.setItem('gh_token', tok);
+        $('who').innerHTML = 'unlocked as <strong style="color:var(--ink)">@'+esc(me.login)+'</strong>';
+        $('gate').classList.add('hidden');
+        await loadManifest(); newPost();
+      } catch(e){ TOKEN=''; $('gateErr').textContent = 'Token rejected — check scopes & repo access.'; }
+    }
+    $('unlockBtn').addEventListener('click', () => { const t=$('tok').value.trim(); if(t) tryUnlock(t); });
+    $('tok').addEventListener('keydown', e => { if(e.key==='Enter'){ const t=$('tok').value.trim(); if(t) tryUnlock(t); } });
+    $('lockBtn').addEventListener('click', () => { localStorage.removeItem('gh_token'); TOKEN=''; $('tok').value=''; $('gate').classList.remove('hidden'); });
+    $('newBtn').addEventListener('click', newPost);
+    $('publishBtn').addEventListener('click', publish);
+    $('deleteBtn').addEventListener('click', deletePost);
+    $('mdToggle').addEventListener('click', () => $('editor').classList.toggle('nomd'));
+
+    // boot: if we already have a stored token, validate silently
+    $('date').value = today();
+    if(TOKEN) tryUnlock(TOKEN); else sync();
+  })();
+  </script>
+</body>
+</html>
