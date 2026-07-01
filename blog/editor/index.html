@@ -243,6 +243,12 @@
       const text = (e.clipboardData || window.clipboardData).getData('text/plain');
       document.execCommand('insertText', false, text);
     });
+    // when focus leaves the editor, tidy the block structure so spacing is uniform
+    wy.addEventListener('blur', () => {
+      const cleaned = normalizeHtml(wy);
+      if(cleaned && cleaned !== wy.innerHTML){ wy.innerHTML = cleaned; sync(); saveDraft(); }
+    });
+    try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch(e){}
     window.fmt = fmt; window.addLink = addLink; window.pickImg = pickImg; window.sync = sync;
 
     /* ---------- HTML <-> Markdown ---------- */
@@ -274,8 +280,35 @@
         default: return inlineMd(node);
       }
     }
+    // collapse contenteditable's mix of <div>/<p>/<br>/empty-blocks into uniform <p> blocks
+    function normalizeHtml(root){
+      const out=[]; let buf='';
+      const keep=/^(H1|H2|H3|BLOCKQUOTE|PRE|UL|OL)$/;
+      const flush=()=>{ const t=buf.replace(/<[^>]*>/g,'').trim(); if(t || /<img/i.test(buf)) out.push('<p>'+buf.trim()+'</p>'); buf=''; };
+      root.childNodes.forEach(node=>{
+        if(node.nodeType===3){ buf+=esc(node.textContent); return; }
+        if(node.nodeType!==1) return;
+        const tag=node.nodeName;
+        if(tag==='BR'){ flush(); return; }
+        if(keep.test(tag)){ flush(); out.push(node.outerHTML); return; }
+        if(tag==='IMG'){ flush(); out.push('<p>'+node.outerHTML+'</p>'); return; }
+        if(tag==='DIV'||tag==='P'){
+          flush();
+          node.innerHTML.split(/<br\s*\/?>/i).forEach(part=>{
+            const t=part.replace(/<[^>]*>/g,'').trim();
+            if(t || /<img/i.test(part)) out.push('<p>'+part.trim()+'</p>');
+          });
+          return;
+        }
+        buf+=node.outerHTML; // inline element (strong/em/a/code/span)
+      });
+      flush();
+      return out.join('');
+    }
+    function normalizedRoot(){ const d=document.createElement('div'); d.innerHTML=normalizeHtml(wy); return d; }
+
     function bodyToMarkdown(){
-      return [...wy.childNodes].map(blockMd).map(s=>s.trim()).filter(Boolean).join('\n\n');
+      return [...normalizedRoot().childNodes].map(blockMd).map(s=>s.trim()).filter(Boolean).join('\n\n');
     }
     function markdownToHtml(src){
       src = src.replace(/\r/g,'').replace(/^---\n[\s\S]*?\n---\n?/,'');
@@ -403,14 +436,14 @@
 </html>`;
     }
 
-    // produce clean body HTML for the published page (absolute image paths, no editor artifacts)
+    // produce clean, uniformly-spaced body HTML for the published page (absolute image paths, no editor artifacts)
     function publishedBodyHtml(){
       const clone = wy.cloneNode(true);
       clone.querySelectorAll('img').forEach(img=>{
         const p = img.getAttribute('data-path'); if(p) img.setAttribute('src', p);
         img.removeAttribute('data-path');
       });
-      return clone.innerHTML.trim();
+      return normalizeHtml(clone).trim();
     }
 
     /* ---------- GitHub API ---------- */
