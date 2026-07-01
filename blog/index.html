@@ -53,6 +53,8 @@
   @keyframes blink { 50% { opacity:0; } }
 
   .posts { list-style:none; margin:16px 0 18px; }
+  .posts li { opacity:0; transform:translateY(4px); transition:opacity .35s var(--ease), transform .35s var(--ease); }
+  .posts li.show { opacity:1; transform:none; }
   .post { display:block; text-decoration:none; padding:16px; margin:0 -16px; border-radius:10px;
     border:1px solid transparent; transition:background .25s, border-color .25s; }
   .post:hover { background:rgba(255,255,255,0.03); border-color:var(--line); }
@@ -66,11 +68,18 @@
   .post-meta .tag { color:var(--blue); } .post-meta .date { color:var(--ink-dim); }
   .empty { color:var(--ink-faint); margin:18px 0; }
 
-  .foot { display:flex; gap:18px; margin-top:10px; }
+  .foot { display:flex; gap:18px; margin-top:10px;
+    opacity:0; transform:translateY(4px); transition:opacity .35s var(--ease), transform .35s var(--ease); }
+  .foot.show { opacity:1; transform:none; }
   .foot a { display:inline-flex; align-items:center; gap:9px; color:var(--ink-dim); text-decoration:none; font-size:16.5px; transition:color .25s; }
   .foot a svg { width:18px; height:18px; }
   .foot a:hover { color:var(--orange); }
   @media (max-width:560px){ .term-body{ padding:22px 20px; } .post .arrow{ display:none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .terminal { animation:none; opacity:1; transform:none; }
+    .blink { animation:none; }
+    .posts li, .foot { opacity:1; transform:none; }
+  }
 </style>
 </head>
 <body>
@@ -85,48 +94,124 @@
             taranagarwal — -zsh — <span id="dims">80×24</span>
           </span>
         </div>
-        <div class="term-body" id="term-body">
-          <div class="line"><span class="prompt"><span class="path">~/taranagarwal/blog</span> $</span> <span class="cmd">ls -t posts/</span></div>
-          <ul class="posts" id="posts"></ul>
-          <div class="line"><span class="prompt"><span class="path">~/taranagarwal/blog</span> $</span> <span class="blink"></span></div>
-          <div class="foot"><a href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>cd ~ (home)</a></div>
-        </div>
+        <div class="term-body" id="term-body"></div>
       </div>
     </div>
   </main>
+  <!-- home link template, revealed after the posts list -->
+  <template id="foot-tpl">
+    <div class="foot"><a href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>cd ~ (home)</a></div>
+  </template>
+
   <script>
+    const term = document.getElementById('term-body');
+    const PROMPT = '<span class="prompt"><span class="path">~/taranagarwal/blog</span> $</span> ';
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
     function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-    fetch('/blog/posts.json', { cache:'no-store' })
-      .then(r => r.ok ? r.json() : [])
-      .then(posts => {
-        const ul = document.getElementById('posts');
-        if (!Array.isArray(posts) || posts.length === 0) {
-          ul.innerHTML = '<li class="empty"># no posts yet — check back soon</li>';
-          return;
-        }
-        posts.sort((a,b) => (b.date||'').localeCompare(a.date||''));
-        ul.innerHTML = posts.map(p => {
-          const tags = (p.tags||[]).map(t => '<span class="tag">#'+esc(t)+'</span>').join(' ');
-          const rt = p.readingTime ? '<span>· '+p.readingTime+' min</span>' : '';
-          return '<li><a class="post" href="/blog/'+esc(p.slug)+'">'
-            + '<div class="post-top"><span class="fileicon">▸</span><span class="title">'+esc(p.title)+'</span><span class="arrow">↗</span></div>'
-            + '<div class="post-meta"><span class="date">'+esc(p.date||'')+'</span>'+tags+rt+'</div></a></li>';
-        }).join('');
-      })
-      .catch(() => { document.getElementById('posts').innerHTML = '<li class="empty"># could not load posts</li>'; });
+
+    function line(html) {
+      const d = document.createElement('div');
+      d.className = 'line';
+      d.innerHTML = html;
+      term.appendChild(d);
+      return d;
+    }
+
+    async function typeCmd(text) {
+      const d = line(PROMPT + '<span class="cmd"></span>');
+      const span = d.querySelector('.cmd');
+      for (const ch of text) { span.textContent += ch; await wait(38 + Math.random()*45); }
+    }
+
+    function postMarkup(p) {
+      const tags = (p.tags||[]).map(t => '<span class="tag">#'+esc(t)+'</span>').join(' ');
+      const rt = p.readingTime ? '<span>· '+p.readingTime+' min</span>' : '';
+      return '<a class="post" href="/blog/'+esc(p.slug)+'">'
+        + '<div class="post-top"><span class="fileicon">▸</span><span class="title">'+esc(p.title)+'</span><span class="arrow">↗</span></div>'
+        + '<div class="post-meta"><span class="date">'+esc(p.date||'')+'</span>'+tags+rt+'</div></a>';
+    }
+
+    // reveal the posts list one item at a time
+    async function revealPosts(posts, instant) {
+      const ul = document.createElement('ul');
+      ul.className = 'posts';
+      term.appendChild(ul);
+      if (!Array.isArray(posts) || posts.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.textContent = '# no posts yet — check back soon';
+        ul.appendChild(li);
+        return;
+      }
+      posts.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+      for (const p of posts) {
+        const li = document.createElement('li');
+        li.innerHTML = postMarkup(p);
+        ul.appendChild(li);
+        if (instant) { li.classList.add('show'); continue; }
+        requestAnimationFrame(() => li.classList.add('show'));
+        await wait(130);
+      }
+    }
+
+    function finalPrompt() {
+      line(PROMPT + '<span class="blink"></span>');
+    }
+
+    async function revealFoot(instant) {
+      const tpl = document.getElementById('foot-tpl').content.cloneNode(true);
+      term.appendChild(tpl);
+      const foot = term.querySelector('.foot');
+      if (instant) { foot.classList.add('show'); return; }
+      requestAnimationFrame(() => foot.classList.add('show'));
+    }
+
+    async function run() {
+      let posts = [];
+      try {
+        const r = await fetch('/blog/posts.json', { cache:'no-store' });
+        posts = r.ok ? await r.json() : [];
+      } catch (e) { posts = null; }
+
+      if (reduce) {
+        line(PROMPT + '<span class="cmd">ls -t posts/</span>');
+        if (posts === null) { const ul=document.createElement('ul'); ul.className='posts'; ul.innerHTML='<li class="empty"># could not load posts</li>'; term.appendChild(ul); }
+        else await revealPosts(posts, true);
+        finalPrompt();
+        await revealFoot(true);
+        return;
+      }
+
+      await wait(450);
+      await typeCmd('ls -t posts/');
+      await wait(230);
+      if (posts === null) {
+        const ul = document.createElement('ul'); ul.className = 'posts';
+        ul.innerHTML = '<li class="empty"># could not load posts</li>';
+        term.appendChild(ul);
+      } else {
+        await revealPosts(posts);
+      }
+      await wait(200);
+      finalPrompt();
+      await wait(160);
+      await revealFoot();
+    }
+    run();
 
     // live terminal dimensions (cols × rows), like Apple Terminal
-    const termBody = document.getElementById('term-body');
     function updateDims() {
       const probe = document.createElement('span');
       probe.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;font-family:var(--mono);font-size:16.5px;';
       probe.textContent = '0'.repeat(40);
-      termBody.appendChild(probe);
+      term.appendChild(probe);
       const charW = probe.getBoundingClientRect().width / 40;
       probe.remove();
       const lineH = 16.5 * 1.6;
-      const cols = Math.max(20, Math.round((termBody.clientWidth - 56) / charW));
-      const rows = Math.max(8, Math.round((termBody.clientHeight - 52) / lineH));
+      const cols = Math.max(20, Math.round((term.clientWidth - 56) / charW));
+      const rows = Math.max(8, Math.round((term.clientHeight - 52) / lineH));
       const el = document.getElementById('dims');
       if (el) el.textContent = cols + '×' + rows;
     }
