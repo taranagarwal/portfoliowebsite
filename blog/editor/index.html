@@ -319,6 +319,41 @@
     }
     ['t','tags','date'].forEach(id => $(id).addEventListener('input', sync));
 
+    /* ---------- autosave (never lose work again) ---------- */
+    const DRAFT_KEY = 'blog_draft';
+    let dirty = false, saveTimer = null;
+    function saveDraft(){
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          slug: currentSlug, title: $('t').value, tags: $('tags').value,
+          date: $('date').value, html: wy.innerHTML, ts: Date.now()
+        }));
+        const el = $('status'); el.textContent = '✓ draft autosaved'; el.style.color = 'var(--ink-faint)';
+      } catch(e){}
+    }
+    function scheduleSave(){ dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveDraft, 600); }
+    function clearDraft(){ try { localStorage.removeItem(DRAFT_KEY); } catch(e){} dirty = false; }
+    wy.addEventListener('input', scheduleSave);
+    ['t','tags','date'].forEach(id => $(id).addEventListener('input', scheduleSave));
+    // warn before leaving (back button, close tab, etc.) if there's unsaved work
+    window.addEventListener('beforeunload', e => {
+      if (dirty && wy.innerText.trim()) { e.preventDefault(); e.returnValue = ''; return ''; }
+    });
+    function maybeRestoreDraft(){
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY); if(!raw) return;
+        const d = JSON.parse(raw);
+        if(!d || !d.html || !d.html.replace(/<[^>]*>/g,'').trim()) return;
+        const when = new Date(d.ts).toLocaleString();
+        if(confirm('Restore your unsaved draft "'+(d.title||'untitled')+'"?\n(autosaved '+when+')')){
+          currentSlug = d.slug || null;
+          $('t').value = d.title || ''; $('tags').value = d.tags || ''; $('date').value = d.date || today();
+          wy.innerHTML = d.html; $('deleteBtn').disabled = !currentSlug;
+          dirty = true; renderSidebar(); sync();
+        }
+      } catch(e){}
+    }
+
     /* ---------- reading time & excerpt ---------- */
     function readingTime(){ const words = wy.innerText.trim().split(/\s+/).filter(Boolean).length; return Math.max(1, Math.round(words/200)); }
     function excerpt(){ return wy.innerText.replace(/\s+/g,' ').trim().slice(0,160); }
@@ -461,7 +496,7 @@
         ];
         for(const [repoPath,file] of pendingImages){ files.push({ path:repoPath, b64: await fileToB64(file) }); }
         await commitFiles('blog: publish "'+title+'"', files);
-        manifest = next; currentSlug = slug; pendingImages.clear();
+        manifest = next; currentSlug = slug; pendingImages.clear(); clearDraft();
         $('deleteBtn').disabled=false; renderSidebar();
         status('published → live in ~30–60s at /blog/'+slug,'var(--green)');
       } catch(e){ status(e.message,'#ff6b6b'); }
@@ -492,7 +527,7 @@
         localStorage.setItem('gh_token', tok);
         $('who').innerHTML = 'unlocked as <strong style="color:var(--ink)">@'+esc(me.login)+'</strong>';
         $('gate').classList.add('hidden');
-        await loadManifest(); newPost();
+        await loadManifest(); newPost(); maybeRestoreDraft();
       } catch(e){ TOKEN=''; $('gateErr').textContent = 'Token rejected — check scopes & repo access.'; }
     }
     $('unlockBtn').addEventListener('click', () => { const t=$('tok').value.trim(); if(t) tryUnlock(t); });
