@@ -199,7 +199,7 @@
       await wait(160);
       await revealFoot();
     }
-    run();
+    run().catch(e => console.error('blog index render failed', e));
 
     // live terminal dimensions (cols × rows), like Apple Terminal
     function updateDims() {

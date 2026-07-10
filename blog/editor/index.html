@@ -213,7 +213,7 @@
     function slugify(s){ return String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60) || 'untitled'; }
     function today(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
     function utf8ToB64(str){ const b=new TextEncoder().encode(str); let s=''; b.forEach(x=>s+=String.fromCharCode(x)); return btoa(s); }
-    function fileToB64(file){ return new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result.split(',')[1]); fr.readAsDataURL(file); }); }
+    function fileToB64(file){ return new Promise((resolve,reject)=>{ const fr=new FileReader(); fr.onload=()=>resolve(fr.result.split(',')[1]); fr.onerror=()=>reject(fr.error||new Error('Could not read image '+file.name)); fr.readAsDataURL(file); }); }
     function status(m, color){ const el=$('status'); el.textContent = m||''; el.style.color = color||'var(--orange)'; }
 
     /* ---------- editing ---------- */
@@ -362,10 +362,13 @@
           date: $('date').value, html: wy.innerHTML, ts: Date.now()
         }));
         const el = $('status'); el.textContent = '✓ draft autosaved'; el.style.color = 'var(--ink-faint)';
-      } catch(e){}
+      } catch(e){
+        console.error('autosave failed', e);
+        const el = $('status'); el.textContent = '⚠ autosave failed — storage may be full'; el.style.color = '#ff6b6b';
+      }
     }
     function scheduleSave(){ dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveDraft, 600); }
-    function clearDraft(){ try { localStorage.removeItem(DRAFT_KEY); } catch(e){} dirty = false; }
+    function clearDraft(){ try { localStorage.removeItem(DRAFT_KEY); } catch(e){ console.error('could not clear draft', e); } dirty = false; }
     wy.addEventListener('input', scheduleSave);
     ['t','tags','date'].forEach(id => $(id).addEventListener('input', scheduleSave));
     // warn before leaving (back button, close tab, etc.) if there's unsaved work
@@ -384,7 +387,7 @@
           wy.innerHTML = d.html; $('deleteBtn').disabled = !currentSlug;
           dirty = true; renderSidebar(); sync();
         }
-      } catch(e){}
+      } catch(e){ console.error('could not restore draft', e); clearDraft(); }
     }
 
     /* ---------- reading time & excerpt ---------- */
@@ -471,9 +474,19 @@
     }
 
     /* ---------- manifest / sidebar ---------- */
+    let manifestLoaded = false;
     async function loadManifest(){
-      try { manifest = await (await fetch('/blog/posts.json',{cache:'no-store'})).json(); if(!Array.isArray(manifest)) manifest=[]; }
-      catch { manifest = []; }
+      try {
+        const r = await fetch('/blog/posts.json',{cache:'no-store'});
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        const data = await r.json();
+        manifest = Array.isArray(data) ? data : [];
+        manifestLoaded = true;
+      } catch(e){
+        console.error('could not load posts.json', e);
+        manifest = []; manifestLoaded = false;
+        status('⚠ could not load existing posts — reload before publishing to avoid overwriting them','#ff6b6b');
+      }
       renderSidebar();
     }
     function renderSidebar(){
@@ -511,6 +524,7 @@
     async function publish(){
       const title = $('t').value.trim();
       if(!title){ status('add a title first','#ff6b6b'); return; }
+      if(!manifestLoaded){ status('cannot publish: existing posts failed to load — reload the page first (avoids overwriting posts.json)','#ff6b6b'); return; }
       const slug = currentSlug || slugify(title);
       const tags = $('tags').value.split(',').map(s=>s.trim()).filter(Boolean);
       const date = $('date').value.trim() || today();
@@ -538,6 +552,7 @@
 
     async function deletePost(){
       if(!currentSlug) return;
+      if(!manifestLoaded){ status('cannot delete: existing posts failed to load — reload the page first (avoids overwriting posts.json)','#ff6b6b'); return; }
       if(!confirm('Delete "'+currentSlug+'"? This commits a removal to the repo.')) return;
       status('deleting…','var(--orange)');
       try {
@@ -561,7 +576,12 @@
         $('who').innerHTML = 'unlocked as <strong style="color:var(--ink)">@'+esc(me.login)+'</strong>';
         $('gate').classList.add('hidden');
         await loadManifest(); newPost(); maybeRestoreDraft();
-      } catch(e){ TOKEN=''; $('gateErr').textContent = 'Token rejected — check scopes & repo access.'; }
+      } catch(e){
+        TOKEN='';
+        $('gateErr').textContent = /GitHub 40[13]/.test(e.message)
+          ? 'Token rejected — check scopes & repo access.'
+          : 'Could not verify token: '+e.message;
+      }
     }
     $('unlockBtn').addEventListener('click', () => { const t=$('tok').value.trim(); if(t) tryUnlock(t); });
     $('tok').addEventListener('keydown', e => { if(e.key==='Enter'){ const t=$('tok').value.trim(); if(t) tryUnlock(t); } });
