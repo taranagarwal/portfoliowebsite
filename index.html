@@ -211,10 +211,12 @@
     </div>
   </template>
 
+  <script src="assets/site-utils.js"></script>
   <script>
     const term = document.getElementById('term');
     const PROMPT = '<span class="prompt"><span class="path">~/taranagarwal</span> $</span> ';
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const { line, typeCommand, finalPrompt } = SiteUtils.createTerminal(term, PROMPT, 'ln');
+    const { reducedMotion: reduce, trackTerminalDimensions, wait } = SiteUtils;
 
     const seq = [
       { cmd: 'cat about.txt', lines: [
@@ -223,22 +225,6 @@
       ] },
       { cmd: 'ls ~/links', cards: true },
     ];
-
-    const wait = (ms) => new Promise(r => setTimeout(r, ms));
-
-    function line(html) {
-      const d = document.createElement('div');
-      d.className = 'ln';
-      d.innerHTML = html;
-      term.appendChild(d);
-      return d;
-    }
-
-    async function typeCmd(text) {
-      const d = line(PROMPT + '<span class="cmd"></span>');
-      const span = d.querySelector('.cmd');
-      for (const ch of text) { span.textContent += ch; await wait(38 + Math.random()*45); }
-    }
 
     // reveal an output block one line at a time
     async function typeOut(htmlLines, instant) {
@@ -268,10 +254,6 @@
       }
     }
 
-    function finalPrompt() {
-      line(PROMPT + '<span class="cursor"></span>');
-    }
-
     async function run() {
       if (reduce) {
         for (const s of seq) {
@@ -279,37 +261,21 @@
           if (s.lines) await typeOut(s.lines, true);
           if (s.cards) await revealLinks(true);
         }
-        finalPrompt();
+        finalPrompt('cursor');
         return;
       }
       await wait(450);
       for (const s of seq) {
-        await typeCmd(s.cmd);
+        await typeCommand(s.cmd);
         await wait(230);
         if (s.lines) { await typeOut(s.lines); await wait(230); }
         if (s.cards) { await revealLinks(); await wait(160); }
       }
-      finalPrompt();
+      finalPrompt('cursor');
     }
     run();
 
-    // live terminal dimensions (cols × rows), like Apple Terminal
-    function updateDims() {
-      const probe = document.createElement('span');
-      probe.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;font-family:var(--mono);font-size:16.5px;';
-      probe.textContent = '0'.repeat(40);
-      term.appendChild(probe);
-      const charW = probe.getBoundingClientRect().width / 40;
-      probe.remove();
-      const lineH = 16.5 * 1.6;
-      // term-body padding: 28 L/R, 28 T + 24 B
-      const cols = Math.max(20, Math.round((term.clientWidth - 56) / charW));
-      const rows = Math.max(8, Math.round((term.clientHeight - 52) / lineH));
-      const el = document.getElementById('dims');
-      if (el) el.textContent = cols + '×' + rows;
-    }
-    updateDims();
-    addEventListener('resize', updateDims);
+    trackTerminalDimensions(term, document.getElementById('dims'));
   </script>
 </body>
 </html>

@@ -103,27 +103,17 @@
     <div class="foot"><a href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>cd ~ (home)</a></div>
   </template>
 
+  <script src="../assets/site-utils.js"></script>
   <script>
     const term = document.getElementById('term-body');
     const PROMPT = '<span class="prompt"><span class="path">~/taranagarwal/blog</span> $</span> ';
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const wait = (ms) => new Promise(r => setTimeout(r, ms));
-
-    function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-
-    function line(html) {
-      const d = document.createElement('div');
-      d.className = 'line';
-      d.innerHTML = html;
-      term.appendChild(d);
-      return d;
-    }
-
-    async function typeCmd(text) {
-      const d = line(PROMPT + '<span class="cmd"></span>');
-      const span = d.querySelector('.cmd');
-      for (const ch of text) { span.textContent += ch; await wait(38 + Math.random()*45); }
-    }
+    const { line, typeCommand, finalPrompt } = SiteUtils.createTerminal(term, PROMPT, 'line');
+    const {
+      escapeHtml: esc,
+      reducedMotion: reduce,
+      trackTerminalDimensions,
+      wait,
+    } = SiteUtils;
 
     function postMarkup(p) {
       const tags = (p.tags||[]).map(t => '<span class="tag">#'+esc(t)+'</span>').join(' ');
@@ -156,10 +146,6 @@
       }
     }
 
-    function finalPrompt() {
-      line(PROMPT + '<span class="blink"></span>');
-    }
-
     async function revealFoot(instant) {
       const tpl = document.getElementById('foot-tpl').content.cloneNode(true);
       term.appendChild(tpl);
@@ -179,13 +165,13 @@
         line(PROMPT + '<span class="cmd">ls -t posts/</span>');
         if (posts === null) { const ul=document.createElement('ul'); ul.className='posts'; ul.innerHTML='<li class="empty"># could not load posts</li>'; term.appendChild(ul); }
         else await revealPosts(posts, true);
-        finalPrompt();
+        finalPrompt('blink');
         await revealFoot(true);
         return;
       }
 
       await wait(450);
-      await typeCmd('ls -t posts/');
+      await typeCommand('ls -t posts/');
       await wait(230);
       if (posts === null) {
         const ul = document.createElement('ul'); ul.className = 'posts';
@@ -195,28 +181,13 @@
         await revealPosts(posts);
       }
       await wait(200);
-      finalPrompt();
+      finalPrompt('blink');
       await wait(160);
       await revealFoot();
     }
     run();
 
-    // live terminal dimensions (cols × rows), like Apple Terminal
-    function updateDims() {
-      const probe = document.createElement('span');
-      probe.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;font-family:var(--mono);font-size:16.5px;';
-      probe.textContent = '0'.repeat(40);
-      term.appendChild(probe);
-      const charW = probe.getBoundingClientRect().width / 40;
-      probe.remove();
-      const lineH = 16.5 * 1.6;
-      const cols = Math.max(20, Math.round((term.clientWidth - 56) / charW));
-      const rows = Math.max(8, Math.round((term.clientHeight - 52) / lineH));
-      const el = document.getElementById('dims');
-      if (el) el.textContent = cols + '×' + rows;
-    }
-    updateDims();
-    addEventListener('resize', updateDims);
+    trackTerminalDimensions(term, document.getElementById('dims'));
   </script>
 </body>
 </html>
