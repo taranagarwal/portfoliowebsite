@@ -291,7 +291,7 @@
       }
       finalPrompt();
     }
-    run();
+    run().catch(e => console.error('home render failed', e));
 
     // live terminal dimensions (cols × rows), like Apple Terminal
     function updateDims() {
