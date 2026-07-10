@@ -211,6 +211,7 @@
     </div>
   </template>
 
+  <script src="lib/dims.js"></script>
   <script>
     const term = document.getElementById('term');
     const PROMPT = '<span class="prompt"><span class="path">~/taranagarwal</span> $</span> ';
@@ -303,8 +304,7 @@
       probe.remove();
       const lineH = 16.5 * 1.6;
       // term-body padding: 28 L/R, 28 T + 24 B
-      const cols = Math.max(20, Math.round((term.clientWidth - 56) / charW));
-      const rows = Math.max(8, Math.round((term.clientHeight - 52) / lineH));
+      const { cols, rows } = DimsLib.computeDims(term.clientWidth, term.clientHeight, charW, lineH);
       const el = document.getElementById('dims');
       if (el) el.textContent = cols + '×' + rows;
     }

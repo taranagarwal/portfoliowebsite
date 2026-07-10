@@ -196,8 +196,10 @@
     </div>
   </main>
 
+  <script src="../lib/editor-lib.js"></script>
   <script>
   (function(){
+    const { esc, escAttr, slugify, today, utf8ToB64, inlineMd, blockMd, normalizeHtml, markdownToHtml, parseFrontmatter, buildPostHtml } = EditorLib;
     const OWNER='taranagarwal', REPO='portfoliowebsite', BRANCH='main';
     const API='https://api.github.com';
     let TOKEN = localStorage.getItem('gh_token') || '';
@@ -208,11 +210,6 @@
     const $ = id => document.getElementById(id);
     const wy = $('wy');
 
-    function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-    function escAttr(s){ return esc(s).replace(/'/g,'&#39;'); }
-    function slugify(s){ return String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60) || 'untitled'; }
-    function today(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-    function utf8ToB64(str){ const b=new TextEncoder().encode(str); let s=''; b.forEach(x=>s+=String.fromCharCode(x)); return btoa(s); }
     function fileToB64(file){ return new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result.split(',')[1]); fr.readAsDataURL(file); }); }
     function status(m, color){ const el=$('status'); el.textContent = m||''; el.style.color = color||'var(--orange)'; }
 
@@ -252,87 +249,10 @@
     window.fmt = fmt; window.addLink = addLink; window.pickImg = pickImg; window.sync = sync;
 
     /* ---------- HTML <-> Markdown ---------- */
-    function inlineMd(node){
-      let s='';
-      node.childNodes.forEach(n=>{
-        if(n.nodeType===3) s+=n.textContent;
-        else if(/^(STRONG|B)$/.test(n.nodeName)) s+='**'+inlineMd(n)+'**';
-        else if(/^(EM|I)$/.test(n.nodeName)) s+='*'+inlineMd(n)+'*';
-        else if(n.nodeName==='CODE') s+='`'+n.textContent+'`';
-        else if(n.nodeName==='A') s+='['+inlineMd(n)+']('+n.getAttribute('href')+')';
-        else if(n.nodeName==='IMG') s+='!['+(n.alt||'')+']('+(n.getAttribute('data-path')||n.src)+')';
-        else if(n.nodeName==='BR') s+='\n';
-        else s+=inlineMd(n);
-      });
-      return s;
-    }
-    function blockMd(node){
-      if(node.nodeType===3) return node.textContent.trim();
-      switch(node.nodeName){
-        case 'H1': return '# '+inlineMd(node);
-        case 'H2': return '## '+inlineMd(node);
-        case 'H3': return '### '+inlineMd(node);
-        case 'BLOCKQUOTE': return '> '+inlineMd(node);
-        case 'PRE': return '```\n'+node.textContent.replace(/\n+$/,'')+'\n```';
-        case 'UL': return [...node.children].map(li=>'- '+inlineMd(li)).join('\n');
-        case 'OL': return [...node.children].map((li,i)=>(i+1)+'. '+inlineMd(li)).join('\n');
-        case 'IMG': return '!['+(node.alt||'')+']('+(node.getAttribute('data-path')||node.src)+')';
-        default: return inlineMd(node);
-      }
-    }
-    // collapse contenteditable's mix of <div>/<p>/<br>/empty-blocks into uniform <p> blocks
-    function normalizeHtml(root){
-      const out=[]; let buf='';
-      const keep=/^(H1|H2|H3|BLOCKQUOTE|PRE|UL|OL)$/;
-      const flush=()=>{ const t=buf.replace(/<[^>]*>/g,'').trim(); if(t || /<img/i.test(buf)) out.push('<p>'+buf.trim()+'</p>'); buf=''; };
-      root.childNodes.forEach(node=>{
-        if(node.nodeType===3){ buf+=esc(node.textContent); return; }
-        if(node.nodeType!==1) return;
-        const tag=node.nodeName;
-        if(tag==='BR'){ flush(); return; }
-        if(keep.test(tag)){ flush(); out.push(node.outerHTML); return; }
-        if(tag==='IMG'){ flush(); out.push('<p>'+node.outerHTML+'</p>'); return; }
-        if(tag==='DIV'||tag==='P'){
-          flush();
-          node.innerHTML.split(/<br\s*\/?>/i).forEach(part=>{
-            const t=part.replace(/<[^>]*>/g,'').trim();
-            if(t || /<img/i.test(part)) out.push('<p>'+part.trim()+'</p>');
-          });
-          return;
-        }
-        buf+=node.outerHTML; // inline element (strong/em/a/code/span)
-      });
-      flush();
-      return out.join('');
-    }
     function normalizedRoot(){ const d=document.createElement('div'); d.innerHTML=normalizeHtml(wy); return d; }
 
     function bodyToMarkdown(){
       return [...normalizedRoot().childNodes].map(blockMd).map(s=>s.trim()).filter(Boolean).join('\n\n');
-    }
-    function markdownToHtml(src){
-      src = src.replace(/\r/g,'').replace(/^---\n[\s\S]*?\n---\n?/,'');
-      const lines = src.split('\n'); let out=''; let i=0;
-      const inline = t => esc(t)
-        .replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img alt="$1" src="$2" data-path="$2">')
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2">$1</a>')
-        .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
-        .replace(/\*([^*]+)\*/g,'<em>$1</em>')
-        .replace(/`([^`]+)`/g,'<code>$1</code>');
-      while(i<lines.length){
-        const l=lines[i];
-        if(/^```/.test(l)){ const c=[]; i++; while(i<lines.length && !/^```/.test(lines[i])){ c.push(lines[i]); i++; } i++; out+='<pre>'+esc(c.join('\n'))+'</pre>'; continue; }
-        if(/^###\s/.test(l)){ out+='<h3>'+inline(l.slice(4))+'</h3>'; i++; continue; }
-        if(/^##\s/.test(l)){ out+='<h2>'+inline(l.slice(3))+'</h2>'; i++; continue; }
-        if(/^#\s/.test(l)){ out+='<h1>'+inline(l.slice(2))+'</h1>'; i++; continue; }
-        if(/^>\s?/.test(l)){ const q=[]; while(i<lines.length && /^>\s?/.test(lines[i])){ q.push(lines[i].replace(/^>\s?/,'')); i++; } out+='<blockquote>'+inline(q.join(' '))+'</blockquote>'; continue; }
-        if(/^[-*]\s/.test(l)){ const it=[]; while(i<lines.length && /^[-*]\s/.test(lines[i])){ it.push('<li>'+inline(lines[i].replace(/^[-*]\s/,''))+'</li>'); i++; } out+='<ul>'+it.join('')+'</ul>'; continue; }
-        if(l.trim()===''){ i++; continue; }
-        const p=[l]; i++;
-        while(i<lines.length && lines[i].trim()!=='' && !/^(#|>|```|[-*]\s)/.test(lines[i])){ p.push(lines[i]); i++; }
-        out+='<p>'+inline(p.join(' '))+'</p>';
-      }
-      return out;
     }
 
     /* ---------- preview sync ---------- */
@@ -396,45 +316,7 @@
     const FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2307080a'/%3E%3Ctext x='20' y='66' font-family='SFMono-Regular,Menlo,monospace' font-size='46' font-weight='700' fill='%23f5945f'%3E%26gt;%3C/text%3E%3Crect x='52' y='40' width='26' height='8' rx='2' fill='%237faede'/%3E%3C/svg%3E";
     const FOLDER = `<svg class="folder" viewBox="0 0 24 24" fill="none"><path d="M3 7.5a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.4.6l1 1a2 2 0 0 0 1.4.6H19a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5z" fill="#3a92f0"/><path d="M3 10.2h18V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6.8z" fill="#62b0ff"/></svg>`;
 
-    function buildPostHtml(meta, bodyHtml){
-      const url = 'https://taranagarwal.com/blog/'+meta.slug;
-      const tags = (meta.tags||[]).map(t=>'#'+t).join(' ');
-      return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${esc(meta.title)} — Taran Agarwal</title>
-<meta name="description" content="${escAttr(meta.excerpt)}" />
-<meta name="author" content="Taran Agarwal" />
-<meta name="theme-color" content="#07080a" />
-<link rel="canonical" href="${url}" />
-<meta property="og:type" content="article" />
-<meta property="og:title" content="${escAttr(meta.title)}" />
-<meta property="og:description" content="${escAttr(meta.excerpt)}" />
-<meta property="og:url" content="${url}" />
-<meta property="article:published_time" content="${meta.date}" />
-<link rel="icon" href="${FAVICON}" />
-<style>${POST_CSS}</style>
-</head>
-<body>
-  <div class="bg-grid"></div><div class="bg-glow"></div>
-  <main><div class="stage"><div class="terminal">
-    <div class="term-bar"><div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
-      <span class="term-title">${FOLDER} taranagarwal — -zsh — blog/${esc(meta.slug)}</span></div>
-    <div class="term-body">
-      <a class="backlink" href="/blog">← cd ../blog</a>
-      <article class="article">
-        <h1>${esc(meta.title)}</h1>
-        <div class="submeta"><span>${esc(meta.date)}</span><span class="tags">${esc(tags)}</span><span>· ${meta.readingTime} min read</span></div>
-        ${bodyHtml}
-      </article>
-      <div class="foot"><a href="/blog">← all posts</a><a href="/">taranagarwal.com</a></div>
-    </div>
-  </div></div></main>
-</body>
-</html>`;
-    }
+    const POST_ASSETS = { POST_CSS, FAVICON, FOLDER };
 
     // produce clean, uniformly-spaced body HTML for the published page (absolute image paths, no editor artifacts)
     function publishedBodyHtml(){
@@ -494,9 +376,7 @@
       status('loading '+slug+'…','var(--ink-dim)');
       try {
         const md = await (await fetch('/blog/posts/'+slug+'.md',{cache:'no-store'})).text();
-        const fm = (md.match(/^---\n([\s\S]*?)\n---/)||[])[1] || '';
-        const meta = {};
-        fm.split('\n').forEach(line=>{ const i=line.indexOf(':'); if(i>0) meta[line.slice(0,i).trim()]=line.slice(i+1).trim(); });
+        const meta = parseFrontmatter(md);
         currentSlug = slug;
         $('t').value = meta.title || slug;
         $('date').value = meta.date || '';
@@ -519,7 +399,7 @@
       $('publishBtn').disabled=true; status('publishing…','var(--orange)');
       try {
         const markdown = '---\ntitle: '+title+'\ndate: '+date+'\ntags: ['+tags.join(', ')+']\nreadingTime: '+rt+'\n---\n\n'+bodyToMarkdown()+'\n';
-        const postHtml = buildPostHtml(meta, publishedBodyHtml());
+        const postHtml = buildPostHtml(meta, publishedBodyHtml(), POST_ASSETS);
         const next = manifest.filter(p=>p.slug!==slug); next.push(meta);
         next.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
         const files = [
