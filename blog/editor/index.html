@@ -210,6 +210,13 @@
 
     function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
     function escAttr(s){ return esc(s).replace(/'/g,'&#39;'); }
+    // block dangerous URL schemes (javascript:, data:, vbscript:, file:) on links; allow relative + http(s)/mailto/tel
+    function safeUrl(u){
+      const raw = String(u == null ? '' : u).trim();
+      const probe = raw.replace(/[\u0000-\u0020]+/g,'').toLowerCase();
+      if(/^(?:javascript|data|vbscript|file):/.test(probe)) return '';
+      return raw;
+    }
     function slugify(s){ return String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60) || 'untitled'; }
     function today(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
     function utf8ToB64(str){ const b=new TextEncoder().encode(str); let s=''; b.forEach(x=>s+=String.fromCharCode(x)); return btoa(s); }
@@ -218,7 +225,7 @@
 
     /* ---------- editing ---------- */
     function fmt(cmd,val){ document.execCommand(cmd,false,val||null); wy.focus(); sync(); }
-    function addLink(){ const u=prompt('Link URL:','https://'); if(u) document.execCommand('createLink',false,u); sync(); }
+    function addLink(){ const u=prompt('Link URL:','https://'); if(u){ const safe=safeUrl(u); if(safe) document.execCommand('createLink',false,safe); else status('blocked unsafe link URL','#ff6b6b'); } sync(); }
     function pickImg(){ $('imgInput').click(); }
     function insertImg(file){
       const name = slugify(file.name.replace(/\.[^.]+$/,'')) + '-' + Date.now().toString(36) + (file.name.match(/\.[^.]+$/)||['.png'])[0].toLowerCase();
@@ -259,7 +266,7 @@
         else if(/^(STRONG|B)$/.test(n.nodeName)) s+='**'+inlineMd(n)+'**';
         else if(/^(EM|I)$/.test(n.nodeName)) s+='*'+inlineMd(n)+'*';
         else if(n.nodeName==='CODE') s+='`'+n.textContent+'`';
-        else if(n.nodeName==='A') s+='['+inlineMd(n)+']('+n.getAttribute('href')+')';
+        else if(n.nodeName==='A'){ const u=safeUrl(n.getAttribute('href')||''); s+= u ? '['+inlineMd(n)+']('+u+')' : inlineMd(n); }
         else if(n.nodeName==='IMG') s+='!['+(n.alt||'')+']('+(n.getAttribute('data-path')||n.src)+')';
         else if(n.nodeName==='BR') s+='\n';
         else s+=inlineMd(n);
@@ -315,7 +322,7 @@
       const lines = src.split('\n'); let out=''; let i=0;
       const inline = t => esc(t)
         .replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img alt="$1" src="$2" data-path="$2">')
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2">$1</a>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g,(m,txt,url)=>{ const u=safeUrl(url); return u ? '<a href="'+u+'">'+txt+'</a>' : txt; })
         .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
         .replace(/\*([^*]+)\*/g,'<em>$1</em>')
         .replace(/`([^`]+)`/g,'<code>$1</code>');
