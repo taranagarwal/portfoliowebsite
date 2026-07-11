@@ -107,7 +107,15 @@
   }
   .term-title .folder { width:16px; height:16px; flex-shrink:0; }
 
-  .term-body { flex:1; min-height:0; overflow:hidden; padding: 28px 28px 24px; font-size: 16.5px; }
+  .term-body {
+    flex:1; min-height:0; padding: 28px 28px 24px; font-size: 16.5px;
+    overflow-y:auto; overflow-x:hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.14) transparent;
+  }
+  .term-body::-webkit-scrollbar { width: 8px; }
+  .term-body::-webkit-scrollbar-track { background: transparent; }
+  .term-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 4px; }
   .ln { white-space: pre-wrap; margin-bottom: 8px; }
   .prompt { color: var(--teal); }
   .prompt .path { color: var(--indigo); }
@@ -225,12 +233,14 @@
     ];
 
     const wait = (ms) => new Promise(r => setTimeout(r, ms));
+    const scrollBottom = () => { term.scrollTop = term.scrollHeight; };
 
     function line(html) {
       const d = document.createElement('div');
       d.className = 'ln';
       d.innerHTML = html;
       term.appendChild(d);
+      scrollBottom();
       return d;
     }
 
@@ -250,6 +260,7 @@
         l.className = 'oline';
         l.innerHTML = html;
         block.appendChild(l);
+        scrollBottom();
         if (instant) { l.classList.add('show'); continue; }
         requestAnimationFrame(() => l.classList.add('show'));
         await wait(190);
@@ -261,9 +272,11 @@
       const tpl = document.getElementById('links-tpl').content.cloneNode(true);
       term.appendChild(tpl);
       const items = term.querySelectorAll('.links .link');
+      scrollBottom();
       for (const it of items) {
         if (instant) { it.classList.add('show'); continue; }
         requestAnimationFrame(() => it.classList.add('show'));
+        scrollBottom();
         await wait(130);
       }
     }
