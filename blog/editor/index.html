@@ -220,21 +220,47 @@
     function fmt(cmd,val){ document.execCommand(cmd,false,val||null); wy.focus(); sync(); }
     function addLink(){ const u=prompt('Link URL:','https://'); if(u) document.execCommand('createLink',false,u); sync(); }
     function pickImg(){ $('imgInput').click(); }
-    function insertImg(file){
+    // track the caret inside the editor so images land where the cursor is,
+    // even after focus moves to the file dialog or toolbar
+    let savedRange = null;
+    document.addEventListener('selectionchange', () => {
+      const sel = window.getSelection();
+      if(sel.rangeCount && wy.contains(sel.getRangeAt(0).startContainer)) savedRange = sel.getRangeAt(0).cloneRange();
+    });
+    function rangeFromPoint(x,y){
+      if(document.caretRangeFromPoint) return document.caretRangeFromPoint(x,y);
+      if(document.caretPositionFromPoint){
+        const p = document.caretPositionFromPoint(x,y);
+        if(p){ const r=document.createRange(); r.setStart(p.offsetNode,p.offset); r.collapse(true); return r; }
+      }
+      return null;
+    }
+    function insertImg(file, range){
       const name = slugify(file.name.replace(/\.[^.]+$/,'')) + '-' + Date.now().toString(36) + (file.name.match(/\.[^.]+$/)||['.png'])[0].toLowerCase();
       const repoPath = 'assets/blog/' + name;
       pendingImages.set(repoPath, file);
       const url = URL.createObjectURL(file);
       const img = document.createElement('img');
       img.src = url; img.dataset.path = '/' + repoPath; img.alt = '';
-      wy.appendChild(img); wy.appendChild(document.createElement('p'));
-      sync();
+      let r = range || savedRange;
+      if(r && wy.contains(r.startContainer)){
+        r.deleteContents();
+        r.insertNode(img);
+        const after = document.createRange();
+        after.setStartAfter(img); after.collapse(true);
+        const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(after);
+        savedRange = after.cloneRange();
+      } else {
+        wy.appendChild(img); wy.appendChild(document.createElement('p'));
+      }
+      sync(); scheduleSave();
     }
     $('imgInput').addEventListener('change', e => { if(e.target.files[0]) insertImg(e.target.files[0]); e.target.value=''; });
     wy.addEventListener('dragover', e => { e.preventDefault(); wy.classList.add('drop'); });
     wy.addEventListener('dragleave', () => wy.classList.remove('drop'));
     wy.addEventListener('drop', e => { e.preventDefault(); wy.classList.remove('drop');
-      [...e.dataTransfer.files].filter(f=>f.type.startsWith('image/')).forEach(insertImg); });
+      savedRange = rangeFromPoint(e.clientX, e.clientY) || savedRange;
+      [...e.dataTransfer.files].filter(f=>f.type.startsWith('image/')).forEach(f => insertImg(f)); });
     // paste as clean text so source colors/styles never leak in
     wy.addEventListener('paste', e => {
       const items = e.clipboardData && e.clipboardData.items;
