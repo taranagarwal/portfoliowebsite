@@ -145,6 +145,8 @@
 
       <div class="editor" id="editor">
         <div class="sidebar">
+          <div class="side-h" id="draftsHead" style="display:none">Drafts</div>
+          <div id="draftList"></div>
           <div class="side-h">Posts</div>
           <div id="postList"></div>
           <button class="newbtn" id="newBtn">+ new post</button>
@@ -183,6 +185,7 @@
           <div class="toolbar">
             <button class="btn toggle" id="mdToggle">⇄ markdown</button>
             <span class="spacer"></span>
+            <button class="btn danger" id="discardBtn" disabled title="Delete the autosaved draft">Discard draft</button>
             <button class="btn danger" id="deleteBtn" disabled>Delete</button>
             <button class="btn primary" id="publishBtn">⌁ Publish</button>
           </div>
@@ -224,11 +227,15 @@
       const name = slugify(file.name.replace(/\.[^.]+$/,'')) + '-' + Date.now().toString(36) + (file.name.match(/\.[^.]+$/)||['.png'])[0].toLowerCase();
       const repoPath = 'assets/blog/' + name;
       pendingImages.set(repoPath, file);
-      const url = URL.createObjectURL(file);
-      const img = document.createElement('img');
-      img.src = url; img.dataset.path = '/' + repoPath; img.alt = '';
-      wy.appendChild(img); wy.appendChild(document.createElement('p'));
-      sync();
+      // use a data URL (not a blob URL) so the image survives inside autosaved drafts across reloads
+      const fr = new FileReader();
+      fr.onload = () => {
+        const img = document.createElement('img');
+        img.src = fr.result; img.dataset.path = '/' + repoPath; img.alt = '';
+        wy.appendChild(img); wy.appendChild(document.createElement('p'));
+        sync(); scheduleSave();
+      };
+      fr.readAsDataURL(file);
     }
     $('imgInput').addEventListener('change', e => { if(e.target.files[0]) insertImg(e.target.files[0]); e.target.value=''; });
     wy.addEventListener('dragover', e => { e.preventDefault(); wy.classList.add('drop'); });
@@ -352,40 +359,105 @@
     }
     ['t','tags','date'].forEach(id => $(id).addEventListener('input', sync));
 
-    /* ---------- autosave (never lose work again) ---------- */
-    const DRAFT_KEY = 'blog_draft';
-    let dirty = false, saveTimer = null;
+    /* ---------- drafts: everything autosaves, kept until you delete it ---------- */
+    const DRAFT_PREFIX = 'blog_draft:';
+    let currentDraftId = null;   // localStorage key suffix: post slug, or new-<id> for unpublished posts
+    let saveTimer = null;
+
+    function draftKey(id){ return DRAFT_PREFIX + id; }
+    function getDraft(id){
+      if(!id) return null;
+      try { const d = JSON.parse(localStorage.getItem(draftKey(id))); return d && typeof d.html==='string' ? d : null; }
+      catch(e){ return null; }
+    }
+    function listDrafts(){
+      const out = [];
+      for(let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if(k && k.indexOf(DRAFT_PREFIX)===0){
+          const d = getDraft(k.slice(DRAFT_PREFIX.length));
+          if(d){ d.id = k.slice(DRAFT_PREFIX.length); out.push(d); }
+        }
+      }
+      out.sort((a,b)=>(b.ts||0)-(a.ts||0));
+      return out;
+    }
+    function removeDraft(id){ try { localStorage.removeItem(draftKey(id)); } catch(e){} }
+    function updateDiscard(){ $('discardBtn').disabled = !getDraft(currentDraftId); }
+
     function saveDraft(){
+      clearTimeout(saveTimer); saveTimer = null;
+      if(!currentDraftId){
+        const hasContent = wy.innerText.trim() || wy.querySelector('img') || $('t').value.trim();
+        if(!hasContent) return; // don't create empty drafts for untouched new posts
+        currentDraftId = currentSlug || ('new-' + Date.now().toString(36));
+      }
       try {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        localStorage.setItem(draftKey(currentDraftId), JSON.stringify({
           slug: currentSlug, title: $('t').value, tags: $('tags').value,
           date: $('date').value, html: wy.innerHTML, ts: Date.now()
         }));
         const el = $('status'); el.textContent = '✓ draft autosaved'; el.style.color = 'var(--ink-faint)';
-      } catch(e){}
+        renderSidebar(); updateDiscard();
+      } catch(e){ status('autosave failed — draft too large for browser storage','#ff6b6b'); }
     }
-    function scheduleSave(){ dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveDraft, 600); }
-    function clearDraft(){ try { localStorage.removeItem(DRAFT_KEY); } catch(e){} dirty = false; }
+    function scheduleSave(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveDraft, 600); }
     wy.addEventListener('input', scheduleSave);
     ['t','tags','date'].forEach(id => $(id).addEventListener('input', scheduleSave));
-    // warn before leaving (back button, close tab, etc.) if there's unsaved work
-    window.addEventListener('beforeunload', e => {
-      if (dirty && wy.innerText.trim()) { e.preventDefault(); e.returnValue = ''; return ''; }
-    });
-    function maybeRestoreDraft(){
+    // flush any pending save before leaving — localStorage is synchronous, so nothing is lost
+    window.addEventListener('beforeunload', () => { if(saveTimer) saveDraft(); });
+    document.addEventListener('visibilitychange', () => { if(document.hidden && saveTimer) saveDraft(); });
+
+    // rebuild pendingImages from data-URL images so drafts restored after a reload can still publish
+    function dataUrlToBlob(u){
+      const parts = u.split(','); const mime = (parts[0].match(/data:([^;]+)/)||[])[1] || 'image/png';
+      const bin = atob(parts[1]); const arr = new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+      return new Blob([arr], { type: mime });
+    }
+    function restorePendingImages(){
+      wy.querySelectorAll('img').forEach(img => {
+        const p = (img.getAttribute('data-path')||'').replace(/^\//,'');
+        if(p && img.src.indexOf('data:')===0){
+          try { pendingImages.set(p, dataUrlToBlob(img.src)); } catch(e){}
+        }
+      });
+    }
+
+    function loadDraft(id){
+      const d = getDraft(id); if(!d) return;
+      if(saveTimer && currentDraftId !== id) saveDraft(); // persist the draft being left
+      currentDraftId = id; currentSlug = d.slug || null;
+      $('t').value = d.title || ''; $('tags').value = d.tags || ''; $('date').value = d.date || today();
+      wy.innerHTML = d.html || '';
+      pendingImages.clear(); restorePendingImages();
+      $('filebadge').textContent = 'blog/' + (currentSlug || slugify(d.title||'') || 'new-post') + '.md';
+      $('deleteBtn').disabled = !currentSlug;
+      updateDiscard(); renderSidebar(); sync();
+    }
+
+    function discardDraft(){
+      const d = getDraft(currentDraftId); if(!d) return;
+      if(!confirm('Discard this draft? '+(currentSlug?'The published post is untouched.':'This unpublished draft will be gone for good.'))) return;
+      clearTimeout(saveTimer); saveTimer = null;
+      removeDraft(currentDraftId); currentDraftId = null;
+      const slug = currentSlug;
+      if(slug && manifest.some(p=>p.slug===slug)){ loadPost(slug); status('draft discarded — showing published version','var(--green)'); }
+      else { newPost(); status('draft discarded','var(--green)'); }
+    }
+
+    // migrate the old single-slot draft key into the per-post format
+    (function(){
       try {
-        const raw = localStorage.getItem(DRAFT_KEY); if(!raw) return;
-        const d = JSON.parse(raw);
-        if(!d || !d.html || !d.html.replace(/<[^>]*>/g,'').trim()) return;
-        const when = new Date(d.ts).toLocaleString();
-        if(confirm('Restore your unsaved draft "'+(d.title||'untitled')+'"?\n(autosaved '+when+')')){
-          currentSlug = d.slug || null;
-          $('t').value = d.title || ''; $('tags').value = d.tags || ''; $('date').value = d.date || today();
-          wy.innerHTML = d.html; $('deleteBtn').disabled = !currentSlug;
-          dirty = true; renderSidebar(); sync();
+        const raw = localStorage.getItem('blog_draft');
+        if(raw){
+          const d = JSON.parse(raw);
+          if(d && d.html && d.html.replace(/<[^>]*>/g,'').trim())
+            localStorage.setItem(draftKey(d.slug || 'new-' + Date.now().toString(36)), raw);
+          localStorage.removeItem('blog_draft');
         }
       } catch(e){}
-    }
+    })();
 
     /* ---------- reading time & excerpt ---------- */
     function readingTime(){ const words = wy.innerText.trim().split(/\s+/).filter(Boolean).length; return Math.max(1, Math.round(words/200)); }
@@ -477,20 +549,31 @@
       renderSidebar();
     }
     function renderSidebar(){
-      const box = $('postList');
       manifest.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+      const drafts = listDrafts();
+      $('draftsHead').style.display = drafts.length ? '' : 'none';
+      $('draftList').innerHTML = drafts.map(d => {
+        const label = d.slug || slugify(d.title||'') || 'untitled';
+        return `<div class="side-post${d.id===currentDraftId?' active':''}" data-draft="${escAttr(d.id)}"><span class="st draft"></span> ${esc(label)}</div>`;
+      }).join('');
+      $('draftList').querySelectorAll('.side-post').forEach(el => el.addEventListener('click', () => loadDraft(el.dataset.draft)));
+      const box = $('postList');
       box.innerHTML = manifest.map(p =>
-        `<div class="side-post${p.slug===currentSlug?' active':''}" data-slug="${escAttr(p.slug)}"><span class="st pub"></span> ${esc(p.slug)}</div>`
+        `<div class="side-post${p.slug===currentSlug && !getDraft(p.slug)?' active':''}" data-slug="${escAttr(p.slug)}"><span class="st pub"></span> ${esc(p.slug)}</div>`
       ).join('') || '<div style="color:var(--ink-faint);font-size:13px;padding:6px">no posts yet</div>';
       box.querySelectorAll('.side-post').forEach(el => el.addEventListener('click', () => loadPost(el.dataset.slug)));
     }
 
     function newPost(){
-      currentSlug=null; $('t').value=''; $('tags').value=''; $('date').value=today();
+      if(saveTimer) saveDraft(); // persist whatever was being edited before switching
+      currentSlug=null; currentDraftId=null; $('t').value=''; $('tags').value=''; $('date').value=today();
       wy.innerHTML=''; pendingImages.clear(); $('filebadge').textContent='blog/new-post.md';
-      $('deleteBtn').disabled=true; renderSidebar(); sync(); $('t').focus();
+      $('deleteBtn').disabled=true; updateDiscard(); renderSidebar(); sync(); $('t').focus();
     }
     async function loadPost(slug){
+      if(saveTimer) saveDraft(); // persist whatever was being edited before switching
+      const d = getDraft(slug);
+      if(d){ loadDraft(slug); status('restored autosaved draft of '+slug,'var(--green)'); return; }
       status('loading '+slug+'…','var(--ink-dim)');
       try {
         const md = await (await fetch('/blog/posts/'+slug+'.md',{cache:'no-store'})).text();
@@ -502,9 +585,9 @@
         $('date').value = meta.date || '';
         $('tags').value = (meta.tags||'').replace(/^\[|\]$/g,'');
         wy.innerHTML = markdownToHtml(md);
-        pendingImages.clear();
+        pendingImages.clear(); currentDraftId = null; // a draft is only created once this post is edited
         $('filebadge').textContent = 'blog/'+slug+'.md';
-        $('deleteBtn').disabled=false; renderSidebar(); sync(); status('');
+        $('deleteBtn').disabled=false; updateDiscard(); renderSidebar(); sync(); status('');
       } catch(e){ status('could not load '+slug,'#ff6b6b'); }
     }
 
@@ -529,8 +612,10 @@
         ];
         for(const [repoPath,file] of pendingImages){ files.push({ path:repoPath, b64: await fileToB64(file) }); }
         await commitFiles('blog: publish "'+title+'"', files);
-        manifest = next; currentSlug = slug; pendingImages.clear(); clearDraft();
-        $('deleteBtn').disabled=false; renderSidebar();
+        manifest = next; currentSlug = slug; pendingImages.clear();
+        if(currentDraftId) removeDraft(currentDraftId); // published — the draft's job is done
+        currentDraftId = null;
+        $('deleteBtn').disabled=false; updateDiscard(); renderSidebar();
         status('published → live in ~30–60s at /blog/'+slug,'var(--green)');
       } catch(e){ status(e.message,'#ff6b6b'); }
       finally { $('publishBtn').disabled=false; }
@@ -547,6 +632,8 @@
           { path:'blog/posts/'+currentSlug+'.md', remove:true },
           { path:'blog/posts.json', b64: utf8ToB64(JSON.stringify(next,null,2)+'\n') },
         ]);
+        removeDraft(currentSlug); if(currentDraftId) removeDraft(currentDraftId);
+        clearTimeout(saveTimer); saveTimer = null; currentDraftId = null; currentSlug = null;
         manifest = next; status('deleted','var(--green)'); newPost();
       } catch(e){ status(e.message,'#ff6b6b'); }
     }
@@ -560,7 +647,10 @@
         localStorage.setItem('gh_token', tok);
         $('who').innerHTML = 'unlocked as <strong style="color:var(--ink)">@'+esc(me.login)+'</strong>';
         $('gate').classList.add('hidden');
-        await loadManifest(); newPost(); maybeRestoreDraft();
+        await loadManifest();
+        const drafts = listDrafts();
+        if(drafts.length){ loadDraft(drafts[0].id); status('restored autosaved draft','var(--green)'); }
+        else newPost();
       } catch(e){ TOKEN=''; $('gateErr').textContent = 'Token rejected — check scopes & repo access.'; }
     }
     $('unlockBtn').addEventListener('click', () => { const t=$('tok').value.trim(); if(t) tryUnlock(t); });
@@ -569,6 +659,7 @@
     $('newBtn').addEventListener('click', newPost);
     $('publishBtn').addEventListener('click', publish);
     $('deleteBtn').addEventListener('click', deletePost);
+    $('discardBtn').addEventListener('click', discardDraft);
     $('mdToggle').addEventListener('click', () => $('editor').classList.toggle('nomd'));
 
     // boot: if we already have a stored token, validate silently
